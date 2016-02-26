@@ -1,6 +1,10 @@
 import pyaudio
 import wave
 import random
+import datetime
+import re
+import os
+import subprocess as sp
 
 from Tkinter import *
 import tkFileDialog
@@ -14,12 +18,14 @@ class MainWindow:
 
         self.conversation_blocks = None
 
-        self.current_clip = [None]*5    #  [audio_clip_path,     0
+        self.current_clip = [None]*6    #  [audio_clip_path,     0
                                         #   parent_audio_path,   1
                                         #   block_index,         2
                                         #   clip_index,          3
                                         #   classification,      4
-                                        #   timestamp]           5
+                                        #   time-start,          5    HH:MM:SS.xxx
+                                        #   time-end]            6    HH:MM:SS.xxx
+
         self.current_block = None
 
         self.processed_clips_in_curr_block = []
@@ -97,6 +103,12 @@ class MainWindow:
 
         self.clips_processed_label = None
 
+        self.interval_regx = re.compile("\\x15\d+_\d+\\x15")
+
+        self.clip_blocks = []
+
+        self.clip_path = None
+
     def load_clan(self):
         self.clan_file = tkFileDialog.askopenfilename()
         self.parse_clan(self.clan_file)
@@ -153,13 +165,20 @@ class MainWindow:
                     conversations.append(curr_conversation)
                     curr_conversation = []
 
-        self.conversation_blocks = self.filter_conversations(conversations)
+        conversation_blocks = self.filter_conversations(conversations)
+
+
+
+        for index, block in enumerate(conversation_blocks):
+            self.clip_blocks.append(self.create_clips(block, path, index))
 
         self.block_count_label = Label(self.main_frame,
-                                       text=str(len(self.conversation_blocks))+\
+                                       text=str(len(conversation_blocks))+\
                                        " blocks")
 
         self.block_count_label.grid(row=0, column=4, columnspan=1)
+
+        self.slice_audio_file(self.clip_blocks)
 
 
     def filter_conversations(self, conversations):
@@ -180,6 +199,33 @@ class MainWindow:
 
 
         return filtered_conversations
+
+
+    def create_clips(self, clips, parent_path, block_index):
+        block = []
+
+        parent_path = os.path.split(parent_path)[1]
+
+        for index, clip in enumerate(clips):
+            temp_clip = ["{}-{}-{}".format(parent_path[0:5], block_index, index) ,
+                         parent_path, block_index,
+                         index, None, None, None]
+
+            interval_reg_result = self.interval_regx.search(clip)
+            if interval_reg_result:
+                interval_str = interval_reg_result.group().replace("\x15", "")
+
+            time = interval_str.split("_")
+            time = [int(time[0]), int(time[1])]
+
+            final_time = self.ms_to_hhmmss(time)
+
+            temp_clip[5] = final_time[0]
+            temp_clip[6] = final_time[1]
+
+            block.append(temp_clip)
+
+        return block
 
 
     def load_random_conv_block(self):
@@ -241,7 +287,52 @@ class MainWindow:
         self.junk_button.deselect()
 
 
+    def slice_audio_file(self, clips):
 
+        clanfilename = clips[0][0][0][0:5]
+        all_blocks_path = os.path.join("clips", clanfilename)
+        if not os.path.exists(all_blocks_path):
+            os.makedirs(all_blocks_path)
+
+        for block in clips:
+            block_path = os.path.join(all_blocks_path, str(block[0][2]))
+            if not os.path.exists(block_path):
+                os.makedirs(block_path)
+
+            for clip in block:
+                command = ["ffmpeg",
+                           "-ss",
+                           str(clip[5]),
+                           "-t",
+                           str(clip[6]),
+                           "-i",
+                           self.audio_file,
+                           os.path.join(block_path, str(clip[3])+".wav"),
+                           "-y"]
+
+                command_string = " ".join(command)
+                print command_string
+
+                pipe = sp.Popen(command, stdout=sp.PIPE, bufsize=10**8)
+                pipe.communicate()  # blocks until the subprocess is complete
+
+
+    def ms_to_s(self, interval):
+        return [float(interval[0])/1000, float(interval[1])/1000]
+
+
+    def ms_to_hhmmss(self, interval):
+
+        x_start = datetime.timedelta(milliseconds= interval[0])
+        x_end = datetime.timedelta(milliseconds=interval[1])
+
+        if interval[0] == 0:
+            start = "0"+x_start.__str__()[:11]+".000"
+        else:
+            start = "0"+x_start.__str__()[:11]
+        end = "0"+x_end.__str__()[:11]
+
+        return [start, end]
 
 if __name__ == "__main__":
 
