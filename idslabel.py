@@ -39,22 +39,13 @@ class MainWindow:
 
         self.conversation_blocks = None
 
-        self.current_clip = [None]*6    #  [audio_clip_path,     0
-                                        #   parent_audio_path,   1
-                                        #   block_index,         2
-                                        #   clip_index,          3
-                                        #   classification,      4
-                                        #   time-start,          5    HH:MM:SS.xxx
-                                        #   time-end]            6    HH:MM:SS.xxx
+        self.current_clip = None
 
         self.current_block_index = None
         self.current_block = None
         self.processed_clips_in_curr_block = []
         self.processed_clips = []
 
-        # list of integers corresponding
-        # to self.conversation_blocks
-        self.previously_selected_blocks = []
 
         self.root = master                # main GUI context
         self.root.title("IDS Label")      # title of window
@@ -62,7 +53,6 @@ class MainWindow:
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
         self.main_frame.pack()            # pack() basically sets up/inserts the element (turns it on)
 
-        # general
         self.load_clan_button = Button(self.main_frame,
                                           text= "Load Clan File",
                                           command=self.load_clan)
@@ -133,7 +123,7 @@ class MainWindow:
         self.interval_regx = re.compile("\\x15\d+_\d+\\x15")
 
         self.clip_blocks = []
-        self.randomized_blocks = []     # indices refer to original unrandomized order in self.clip_blocks
+        self.randomized_blocks = []
         self.clip_path = None
 
 
@@ -201,15 +191,12 @@ class MainWindow:
 
         self.block_count_label.grid(row=0, column=4, columnspan=1)
 
-        #self.slice_audio_file(self.clip_blocks)
         self.create_random_block_range()
 
 
     def slice_block(self, block, block_index):
 
         clanfilename = block.clan_file[0:5]
-
-        #clanfilename = block[1][0][1][0:5]
 
         all_blocks_path = os.path.join("clips", clanfilename)
 
@@ -218,22 +205,8 @@ class MainWindow:
 
         block_path = os.path.join(all_blocks_path, str(block.index))
 
-        #block_path = os.path.join(all_blocks_path, str(block[1][0][3]))
-
-
         if not os.path.exists(block_path):
             os.makedirs(block_path)
-
-        # for clip in block[1]:
-        #     command = ["ffmpeg",
-        #                "-ss",
-        #                str(clip[5]),
-        #                "-t",
-        #                str(clip[6]),
-        #                "-i",
-        #                self.audio_file,
-        #                clip[2], # os.path.join(block_path, str(clip[3])+".wav"),
-        #                "-y"]
 
         for clip in block.clips:
             command = ["ffmpeg",
@@ -250,7 +223,7 @@ class MainWindow:
             print command_string
 
             pipe = sp.Popen(command, stdout=sp.PIPE, bufsize=10**8)
-            pipe.communicate()  # blocks until the subprocess is complete
+            pipe.communicate()
 
 
     def create_random_block_range(self):
@@ -274,8 +247,6 @@ class MainWindow:
             filtered_conversations.append(conv_block)
             conv_block = []
 
-
-
         return filtered_conversations
 
 
@@ -296,11 +267,6 @@ class MainWindow:
             curr_clip = Clip(clip_path, block_index, index)
 
             curr_clip.clan_file = parent_path
-
-
-            # temp_clip = ["{}-{}-{}".format(parent_path[0:5], block_index, index),
-            #              parent_path, clip_path, block_index,
-            #              index, None, None, None]
 
             interval_reg_result = self.interval_regx.search(clip)
             if interval_reg_result:
@@ -339,8 +305,6 @@ class MainWindow:
 
         self.current_block_label = Label(self.main_frame, text="block #{}".format(self.current_block_index))
         self.current_block_label.grid(row=6, column=3)
-
-        # self.current_block = self.conversation_blocks[rand_index]
 
 
     def next_clip(self):
