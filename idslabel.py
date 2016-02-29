@@ -2,9 +2,11 @@ import pyaudio
 import wave
 import random
 import datetime
+import csv
 import re
 import os
 import subprocess as sp
+import multiprocessing as mp
 
 from Tkinter import *
 import tkFileDialog
@@ -80,6 +82,10 @@ class MainWindow:
                                          text="Replay Clip",
                                          command=self.replay_clip)
 
+        self.submit_classification_button = Button(self.main_frame,
+                                                   text="Submit",
+                                                   command=self.submit_classification)
+
 
 
         self.load_clan_button.grid(row=0, column=0)
@@ -89,10 +95,12 @@ class MainWindow:
         self.play_clip_button.grid(row=2, column=2)
         self.next_clip_button.grid(row=3, column=2)
         self.replay_clip_button.grid(row=4, column=2)
+        self.submit_classification_button.grid(row=5, column=2)
 
         self.block_list = Listbox(self.main_frame, width=20, height=25)
         self.block_list.grid(row=1, column=3, rowspan=5)
 
+        self.block_list.bind('<<ListboxSelect>>', self.update_curr_clip)
 
         self.block_count_label = None
 
@@ -125,6 +133,8 @@ class MainWindow:
         self.clip_blocks = []
         self.randomized_blocks = []
         self.clip_path = None
+
+        self.slicing_process = None
 
 
     def load_clan(self):
@@ -193,8 +203,13 @@ class MainWindow:
 
         self.create_random_block_range()
 
+        # slice_process = mp.Process(target=self.slice_all_randomized_blocks)
+        # self.slicing_process = slice_process
+        # slice_process.start()
+        # #self.slice_all_randomized_blocks()
 
-    def slice_block(self, block, block_index):
+
+    def slice_block(self, block):
 
         clanfilename = block.clan_file[0:5]
 
@@ -226,10 +241,19 @@ class MainWindow:
             pipe.communicate()
 
 
+    def slice_all_randomized_blocks(self):
+
+        for block in self.randomized_blocks:
+            self.slice_block(block)
+            # proc = mp.Process(target=self.slice_block, args=(block, block.index))
+            # self.slicing_processes.append(proc)
+            # proc.start()
+
     def create_random_block_range(self):
 
         self.randomized_blocks = list(self.clip_blocks)
         random.shuffle(self.randomized_blocks)
+
 
 
     def filter_conversations(self, conversations):
@@ -241,6 +265,8 @@ class MainWindow:
                 if line.startswith("%"):
                     continue
                 elif line.startswith("@"):
+                    continue
+                elif line.startswith("*SIL:"):
                     continue
                 else:
                     conv_block.append(line)
@@ -282,6 +308,10 @@ class MainWindow:
 
             block.clips.append(curr_clip)
 
+        block.num_clips = len(block.clips)
+
+        self.blocks_to_csv()
+
         return block
 
 
@@ -298,7 +328,7 @@ class MainWindow:
 
         self.current_block = self.randomized_blocks[self.current_block_index]
 
-        self.slice_block(self.current_block, self.current_block_index)
+        self.slice_block(self.current_block)
 
         for index, element in enumerate(self.randomized_blocks[self.current_block_index].clips):
             self.block_list.insert(index, index)
@@ -320,29 +350,59 @@ class MainWindow:
             self.classification_conflict_label.grid_remove()
 
         if self.ids_var.get() == 1:
-            self.current_clip[3] = "ids"
+            self.current_clip.classification = "ids"
         if self.ads_var.get() == 1:
-            self.current_clip[3] = "ads"
+            self.current_clip.classification = "ads"
         if self.neither_var.get() == 1:
-            self.current_clip[3] = "neither"
+            self.current_clip.classification = "neither"
         if self.junk_var.get() == 1:
-            self.current_clip[3] = "junk"
+            self.current_clip.classification = "junk"
 
         self.reset_classification_buttons()
+        # self.processed_clips_in_curr_block.append(self.current_clip)
 
-        self.processed_clips_in_curr_block.append(self.current_clip)
+        #self.current_clip = self.current_block_index[self.current_clip[2]]
 
-        self.current_clip = self.current_block_index[self.current_clip[2]]
+        self.block_list.selection_set(self.current_clip.index+1)
 
-        self.clips_processed_label = Label(self.main_frame,
-                                           text="{} total clips processed"
-                                           .format(len(self.processed_clips_in_curr_block+\
-                                                       self.processed_clips)))
-        self.clips_processed_label.grid(row=6, column=3)
+        # self.clips_processed_label = Label(self.main_frame,
+        #                                    text="{} total clips processed"
+        #                                    .format(len(self.processed_clips_in_curr_block+\
+        #                                                self.processed_clips)))
+        # self.clips_processed_label.grid(row=6, column=3)
 
 
     def replay_clip(self):
         print "hello"
+
+
+    def update_curr_clip(self, evt):
+        box = evt.widget
+        index = int(box.curselection()[0])
+        value = box.get(index)
+        self.current_clip = self.current_block.clips[index]
+        print "you selected {}".format(value)
+
+
+    def submit_classification(self):
+        if self.ids_var.get() == 1 and self.ads_var.get() == 1:
+            self.classification_conflict_label = Label(self.main_frame,
+                                                       text="can't be both IDS and ADS")
+
+            self.classification_conflict_label.grid(row=6, column=0)
+            return
+
+        if self.classification_conflict_label:
+            self.classification_conflict_label.grid_remove()
+
+        if self.ids_var.get() == 1:
+            self.current_clip.classification = "ids"
+        if self.ads_var.get() == 1:
+            self.current_clip.classification = "ads"
+        if self.neither_var.get() == 1:
+            self.current_clip.classification = "neither"
+        if self.junk_var.get() == 1:
+            self.current_clip.classification = "junk"
 
 
     def reset_classification_buttons(self):
@@ -398,6 +458,31 @@ class MainWindow:
         return [start, end, x_diff]
 
 
+    def output_classifications(self):
+
+        output_path = tkFileDialog.asksaveasfilename()
+
+        with open(output_path, "wb") as output:
+            writer = csv.writer(output)
+            writer.writerow(["clan_file", "block_num", "clip_num",
+                             ""])
+
+
+            for block in self.randomized_blocks:
+                clan_file = block.clan_file
+                for clip in block.clips:
+                    writer.writerow([clan_file, str(clip.block_index),
+                                     str(clip.clip_index), clip.classification])
+
+
+
+    def blocks_to_csv(self):
+
+        with open("blocks.csv", "wb") as file:
+            writer = csv.writer(file)
+            writer.writerow(["block", "num_clips"])
+            for block in self.clip_blocks:
+                writer.writerow([block.index, block.num_clips])
 
 if __name__ == "__main__":
 
