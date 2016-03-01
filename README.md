@@ -20,7 +20,7 @@ $: brew install portaudio
 
 For Debian/Ubuntu Linux:
 ```bash
-$: sudo apt-get portaudio
+$: sudo apt-get install portaudio
 ```
 
 #### pyaudio
@@ -31,3 +31,32 @@ $: sudo pip install pyaudio
 ```
 
 ## usage
+
+
+
+
+
+
+## status
+
+### implemented
+
+- parsing cha file and extracting Conversation blocks
+- chopping up associated audio file
+ - each conversation block is chopped as a unit (upon loading)
+ - each tier (except comments and *SIL) within a block are chopped into new audio clips given their timestamps in the cha file
+- randomize the blocks and allow the user to load a random one for classification
+- list the clips within the currently loaded block, and allow the user to play the audio for a given clip.
+- allow the user to select a classification for the currently playing clip
+ - ids
+ - ads
+ - neither
+ - junk
+- export classifications to csv (mostly implemented)
+
+### not implemented yet
+
+- connect to server and checkout cha/audio file for labeling
+- turn app into standalone executable with py2app and py2exe
+- lots of UI things (make it more convenient)
+-
