@@ -59,4 +59,3 @@ $: sudo pip install pyaudio
 - connect to server and checkout cha/audio file for labeling
 - turn app into standalone executable with py2app and py2exe
 - lots of UI things (make it more convenient)
--
