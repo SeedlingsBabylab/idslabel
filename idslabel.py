@@ -475,7 +475,6 @@ class MainWindow:
                                      str(clip.clip_index), clip.classification])
 
 
-
     def blocks_to_csv(self):
 
         with open("blocks.csv", "wb") as file:
