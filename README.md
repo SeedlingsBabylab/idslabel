@@ -32,7 +32,7 @@ $: sudo pip install pyaudio
 
 ## usage
 
-
+You need to "Load Audio" before "Load Clan". Then, "Load Block", click on the clips in the box, and "Play Clip". After selecting one of the classification buttons, "Submit Classification".  
 
 
 
@@ -44,7 +44,7 @@ $: sudo pip install pyaudio
 - parsing cha file and extracting Conversation blocks
 - chopping up associated audio file
  - each conversation block is chopped as a unit (upon loading)
- - each tier (except comments and *SIL) within a block are chopped into new audio clips given their timestamps in the cha file
+ - each tier (except comments and *SIL) within a block is chopped into a new audio clip given its timestamp in the cha file
 - randomize the blocks and allow the user to load a random one for classification
 - list the clips within the currently loaded block, and allow the user to play the audio for a given clip.
 - allow the user to select a classification for the currently playing clip
