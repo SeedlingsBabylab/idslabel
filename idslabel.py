@@ -73,6 +73,10 @@ class MainWindow:
                                        text="Play Clip",
                                        command=self.play_clip)
 
+        self.play_block_button = Button(self.main_frame,
+                                        text="Play Block",
+                                        command=self.play_whole_block)
+
         self.next_clip_button = Button(self.main_frame,
                                        text="Next Clip",
                                        command=self.next_clip)
@@ -93,9 +97,10 @@ class MainWindow:
         self.load_rand_block_button.grid(row=0, column=2)
 
         self.play_clip_button.grid(row=2, column=2)
-        self.next_clip_button.grid(row=3, column=2)
-        self.replay_clip_button.grid(row=4, column=2)
-        self.submit_classification_button.grid(row=5, column=2)
+        self.play_block_button.grid(row=3, column=2)
+        self.next_clip_button.grid(row=4, column=2)
+        self.replay_clip_button.grid(row=5, column=2)
+        self.submit_classification_button.grid(row=6, column=2)
 
         self.block_list = Listbox(self.main_frame, width=20, height=25)
         self.block_list.grid(row=1, column=3, rowspan=5)
@@ -174,6 +179,35 @@ class MainWindow:
 
         p.terminate()
 
+    def play_whole_block(self):
+
+        chunk = 1024
+
+        p = pyaudio.PyAudio()
+        first_clip = self.current_block.clips[0].audio_path
+        f = wave.open(first_clip,"rb")
+
+        stream = p.open(format = p.get_format_from_width(f.getsampwidth()),
+                        channels = f.getnchannels(),
+                        rate = f.getframerate(),
+                        output = True)
+
+        for clip in self.current_block.clips:
+            clip_path = clip.audio_path
+
+
+            f = wave.open(clip_path,"rb")
+
+            data = f.readframes(chunk)
+
+            while data != '':
+                stream.write(data)
+                data = f.readframes(chunk)
+
+        stream.stop_stream()
+        stream.close()
+
+        p.terminate()
 
     def parse_clan(self, path):
         conversations = []
@@ -266,8 +300,8 @@ class MainWindow:
                     continue
                 elif line.startswith("@"):
                     continue
-                elif line.startswith("*SIL:"):
-                    continue
+                # elif line.startswith("*SIL:"):
+                #     continue
                 else:
                     conv_block.append(line)
             filtered_conversations.append(conv_block)
