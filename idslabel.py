@@ -172,7 +172,7 @@ class MainWindow:
     def key_select_ids(self, event):
         self.main_frame.focus_force()
         self.current_clip.classification = "IDS"
-        self.current_clip.label_date = time.strftime("%d/%m/%Y")
+        self.current_clip.label_date = time.strftime("%m/%d/%Y")
         self.current_clip.coder = self.codername_entry.get()
         # print "you selected ids"
         # print "\nfocus is: ", self.root.focus_get()
@@ -181,7 +181,7 @@ class MainWindow:
     def key_select_ads(self, event):
         self.main_frame.focus_force()
         self.current_clip.classification = "ADS"
-        self.current_clip.label_date = time.strftime("%d/%m/%Y")
+        self.current_clip.label_date = time.strftime("%m/%d/%Y")
         self.current_clip.coder = self.codername_entry.get()
         # print "you selected ads"
         # print "\nfocus is: ", self.root.focus_get()
@@ -189,7 +189,7 @@ class MainWindow:
     def key_select_neither(self, event):
         self.main_frame.focus_force()
         self.current_clip.classification = "NEITHER"
-        self.current_clip.label_date = time.strftime("%d/%m/%Y")
+        self.current_clip.label_date = time.strftime("%m/%d/%Y")
         self.current_clip.coder = self.codername_entry.get()
         # print "you selected neither"
         # print "\nfocus is: ", self.root.focus_get()
@@ -197,7 +197,7 @@ class MainWindow:
     def key_select_junk(self, event):
         self.main_frame.focus_force()
         self.current_clip.classification = "JUNK"
-        self.current_clip.label_date = time.strftime("%d/%m/%Y")
+        self.current_clip.label_date = time.strftime("%m/%d/%Y")
         self.current_clip.coder = self.codername_entry.get()
         # print "you selected junk"
         # print "\nfocus is: ", self.root.focus_get()
