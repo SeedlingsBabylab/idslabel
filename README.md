@@ -45,6 +45,8 @@ There are keyboard shortcuts for selecting the classification and cycling throug
 
 
 - Clip Keys
+ - up : previous clip
+ - down: next clip
  - left          : previous clip
  - right         : next clip
  - space         : play clip
