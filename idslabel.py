@@ -2,18 +2,17 @@ import pyaudio
 import wave
 import random
 import datetime
+import time
 import csv
 import re
 import os
 import subprocess as sp
-import multiprocessing as mp
 
 from Tkinter import *
 import tkFileDialog
 
 
 class Block:
-
     def __init__(self, index, clan_file):
 
         self.index = index
@@ -21,17 +20,20 @@ class Block:
         self.num_clips = None
         self.clips = []
 
-class Clip:
 
+class Clip:
     def __init__(self, path, block_index, clip_index):
         self.audio_path = path
         self.clan_file = None
         self.block_index = block_index
         self.clip_index = clip_index
+        self.clip_tier = None
         self.start_time = None
         self.offset_time = None
+        self.timestamp = None
         self.classification = None
-
+        self.label_date = None
+        self.coder = None
 
 class MainWindow:
 
@@ -53,6 +55,22 @@ class MainWindow:
         self.root.title("IDS Label")      # title of window
         self.root.geometry("800x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
+
+
+        self.main_frame.bind("a", self.key_select_ads)
+        self.main_frame.bind("i", self.key_select_ids)
+        self.main_frame.bind("n", self.key_select_neither)
+        self.main_frame.bind("j", self.key_select_junk)
+        self.main_frame.bind("<Key>", self.key_select)
+        self.main_frame.bind("<space>", self.shortcut_play_clip)
+        self.main_frame.bind("<Shift-space>", self.shortcut_play_block)
+        self.main_frame.bind("<Left>", self.shortcut_previous_clip)
+        self.main_frame.bind("<Right>", self.shortcut_next_clip)
+        self.main_frame.bind("<Up>", self.shortcut_previous_clip)
+        self.main_frame.bind("<Down>", self.shortcut_next_clip)
+
+        self.main_frame.bind("<FocusOut>", self.reset_frame_focus)
+
         self.main_frame.pack()            # pack() basically sets up/inserts the element (turns it on)
 
         self.load_clan_button = Button(self.main_frame,
@@ -90,6 +108,10 @@ class MainWindow:
                                                    text="Submit",
                                                    command=self.submit_classification)
 
+        self.output_classifications_button = Button(self.main_frame,
+                                                    text="Output Classifications",
+                                                    command=self.output_classifications)
+
 
 
         self.load_clan_button.grid(row=0, column=0)
@@ -101,15 +123,19 @@ class MainWindow:
         self.next_clip_button.grid(row=4, column=2)
         self.replay_clip_button.grid(row=5, column=2)
         self.submit_classification_button.grid(row=6, column=2)
+        self.output_classifications_button.grid(row=7, column=2)
 
         self.block_list = Listbox(self.main_frame, width=20, height=25)
         self.block_list.grid(row=1, column=3, rowspan=5)
 
         self.block_list.bind('<<ListboxSelect>>', self.update_curr_clip)
-
+        self.block_list.bind("<FocusIn>", self.reset_frame_focus)
         self.block_count_label = None
 
 
+        self.codername_entry = Entry(self.main_frame)
+        self.codername_entry.insert(END, "coder name")
+        self.codername_entry.grid(row=0, column=4)
 
         self.ids_var = IntVar()
         self.ids_button = Checkbutton(self.main_frame, text="IDS", variable=self.ids_var)
@@ -141,6 +167,61 @@ class MainWindow:
 
         self.slicing_process = None
 
+        self.main_frame.focus_set()
+
+    def key_select_ids(self, event):
+        self.main_frame.focus_force()
+        self.current_clip.classification = "IDS"
+        self.current_clip.label_date = time.strftime("%d/%m/%Y")
+        self.current_clip.coder = self.codername_entry.get()
+        # print "you selected ids"
+        # print "\nfocus is: ", self.root.focus_get()
+
+
+    def key_select_ads(self, event):
+        self.main_frame.focus_force()
+        self.current_clip.classification = "ADS"
+        self.current_clip.label_date = time.strftime("%d/%m/%Y")
+        self.current_clip.coder = self.codername_entry.get()
+        # print "you selected ads"
+        # print "\nfocus is: ", self.root.focus_get()
+
+    def key_select_neither(self, event):
+        self.main_frame.focus_force()
+        self.current_clip.classification = "NEITHER"
+        self.current_clip.label_date = time.strftime("%d/%m/%Y")
+        self.current_clip.coder = self.codername_entry.get()
+        # print "you selected neither"
+        # print "\nfocus is: ", self.root.focus_get()
+
+    def key_select_junk(self, event):
+        self.main_frame.focus_force()
+        self.current_clip.classification = "JUNK"
+        self.current_clip.label_date = time.strftime("%d/%m/%Y")
+        self.current_clip.coder = self.codername_entry.get()
+        # print "you selected junk"
+        # print "\nfocus is: ", self.root.focus_get()
+
+    def key_select(self, event):
+        self.main_frame.focus_set()
+        print "pressed {}".format(repr(event.char))
+        print "\nfocus is: ", self.root.focus_get()
+
+    def shortcut_play_clip(self, event):
+        self.play_clip()
+
+    def shortcut_play_block(self, event):
+        self.play_whole_block()
+
+    def shortcut_previous_clip(self, event):
+        self.previous_clip()
+
+    def shortcut_next_clip(self, event):
+        self.next_clip()
+
+
+    def reset_frame_focus(self, event):
+        self.main_frame.focus_set()
 
     def load_clan(self):
         self.clan_file = tkFileDialog.askopenfilename()
@@ -233,7 +314,7 @@ class MainWindow:
                                        text=str(len(conversation_blocks))+\
                                        " blocks")
 
-        self.block_count_label.grid(row=0, column=4, columnspan=1)
+        self.block_count_label.grid(row=7, column=3, columnspan=1)
 
         self.create_random_block_range()
 
@@ -327,10 +408,12 @@ class MainWindow:
             curr_clip = Clip(clip_path, block_index, index)
 
             curr_clip.clan_file = parent_path
+            curr_clip.clip_tier = clip[1:4]
 
             interval_reg_result = self.interval_regx.search(clip)
             if interval_reg_result:
                 interval_str = interval_reg_result.group().replace("\x15", "")
+                curr_clip.timestamp = interval_str
 
             time = interval_str.split("_")
             time = [int(time[0]), int(time[1])]
@@ -365,7 +448,7 @@ class MainWindow:
         self.slice_block(self.current_block)
 
         for index, element in enumerate(self.randomized_blocks[self.current_block_index].clips):
-            self.block_list.insert(index, index)
+            self.block_list.insert(index, element.clip_tier)
 
         self.current_block_label = Label(self.main_frame, text="block #{}".format(self.current_block_index))
         self.current_block_label.grid(row=6, column=3)
@@ -373,31 +456,34 @@ class MainWindow:
 
     def next_clip(self):
 
-        if self.ids_var.get() == 1 and self.ads_var.get() == 1:
-            self.classification_conflict_label = Label(self.main_frame,
-                                                       text="can't be both IDS and ADS")
-
-            self.classification_conflict_label.grid(row=6, column=0)
-            return
-
-        if self.classification_conflict_label:
-            self.classification_conflict_label.grid_remove()
-
-        if self.ids_var.get() == 1:
-            self.current_clip.classification = "ids"
-        if self.ads_var.get() == 1:
-            self.current_clip.classification = "ads"
-        if self.neither_var.get() == 1:
-            self.current_clip.classification = "neither"
-        if self.junk_var.get() == 1:
-            self.current_clip.classification = "junk"
-
-        self.reset_classification_buttons()
+        # if self.ids_var.get() == 1 and self.ads_var.get() == 1:
+        #     self.classification_conflict_label = Label(self.main_frame,
+        #                                                text="can't be both IDS and ADS")
+        #
+        #     self.classification_conflict_label.grid(row=6, column=0)
+        #     return
+        #
+        # if self.classification_conflict_label:
+        #     self.classification_conflict_label.grid_remove()
+        #
+        # if self.ids_var.get() == 1:
+        #     self.current_clip.classification = "ids"
+        # if self.ads_var.get() == 1:
+        #     self.current_clip.classification = "ads"
+        # if self.neither_var.get() == 1:
+        #     self.current_clip.classification = "neither"
+        # if self.junk_var.get() == 1:
+        #     self.current_clip.classification = "junk"
+        #
+        # self.reset_classification_buttons()
         # self.processed_clips_in_curr_block.append(self.current_clip)
 
         #self.current_clip = self.current_block_index[self.current_clip[2]]
 
-        self.block_list.selection_set(self.current_clip.index+1)
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(self.current_clip.clip_index+1)
+
+        self.current_clip = self.current_block.clips[self.current_clip.clip_index+1]
 
         # self.clips_processed_label = Label(self.main_frame,
         #                                    text="{} total clips processed"
@@ -405,6 +491,12 @@ class MainWindow:
         #                                                self.processed_clips)))
         # self.clips_processed_label.grid(row=6, column=3)
 
+
+    def previous_clip(self):
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(self.current_clip.clip_index-1)
+
+        self.current_clip = self.current_block.clips[self.current_clip.clip_index-1]
 
     def replay_clip(self):
         print "hello"
@@ -415,7 +507,7 @@ class MainWindow:
         index = int(box.curselection()[0])
         value = box.get(index)
         self.current_clip = self.current_block.clips[index]
-        print "you selected {}".format(value)
+        print "\nfocus is: ", self.root.focus_get()
 
 
     def submit_classification(self):
@@ -494,19 +586,21 @@ class MainWindow:
 
     def output_classifications(self):
 
+        #[date, coder, clanfile, audiofile, block, timestamp, clip, tier, label]
         output_path = tkFileDialog.asksaveasfilename()
 
         with open(output_path, "wb") as output:
             writer = csv.writer(output)
-            writer.writerow(["clan_file", "block_num", "clip_num",
-                             ""])
-
+            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
+                             "timestamp", "clip", "tier", "label"])
 
             for block in self.randomized_blocks:
                 clan_file = block.clan_file
                 for clip in block.clips:
-                    writer.writerow([clan_file, str(clip.block_index),
-                                     str(clip.clip_index), clip.classification])
+                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
+                                     clip.audio_path, clip.block_index,
+                                     clip.timestamp, clip.clip_index,clip.clip_tier,
+                                     clip.classification])
 
 
     def blocks_to_csv(self):
@@ -516,6 +610,8 @@ class MainWindow:
             writer.writerow(["block", "num_clips"])
             for block in self.clip_blocks:
                 writer.writerow([block.index, block.num_clips])
+
+
 
 if __name__ == "__main__":
 
