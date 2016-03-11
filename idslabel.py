@@ -24,6 +24,7 @@ class Block:
 class Clip:
     def __init__(self, path, block_index, clip_index):
         self.audio_path = path
+        self.parent_audio_path = None
         self.clan_file = None
         self.block_index = block_index
         self.clip_index = clip_index
@@ -42,7 +43,6 @@ class Clip:
                                                                                  self.clip_tier,
                                                                                  self.classification,
                                                                                  self.timestamp)
-
 
 class MainWindow:
 
@@ -398,9 +398,6 @@ class MainWindow:
 
         for block in self.randomized_blocks:
             self.slice_block(block)
-            # proc = mp.Process(target=self.slice_block, args=(block, block.index))
-            # self.slicing_processes.append(proc)
-            # proc.start()
 
     def create_random_block_range(self):
 
@@ -421,8 +418,6 @@ class MainWindow:
                     continue
                 elif line.startswith("@"):
                     continue
-                # elif line.startswith("*SIL:"):
-                #     continue
                 elif line.startswith("*"):
                     last_tier = line[0:4]
                     conv_block.append(line)
@@ -438,6 +433,8 @@ class MainWindow:
 
         parent_path = os.path.split(parent_path)[1]
 
+        parent_audio_path = os.path.split(self.audio_file)[1]
+
         block = Block(block_index, parent_path)
 
 
@@ -449,7 +446,7 @@ class MainWindow:
                                      str(index)+".wav")
 
             curr_clip = Clip(clip_path, block_index, index)
-
+            curr_clip.parent_audio_path = parent_audio_path
             curr_clip.clan_file = parent_path
             curr_clip.clip_tier = clip[1:4]
             if "MULTILINE" in clip:
@@ -629,7 +626,7 @@ class MainWindow:
                 clan_file = block.clan_file
                 for clip in block.clips:
                     writer.writerow([clip.label_date, clip.coder, clip.clan_file,
-                                     clip.audio_path, clip.block_index,
+                                     clip.parent_audio_path, clip.block_index+1,
                                      clip.timestamp, clip.clip_index,clip.clip_tier,
                                      clip.classification])
 
