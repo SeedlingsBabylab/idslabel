@@ -196,6 +196,7 @@ class MainWindow:
 
         print "you selected ids"
         print self.current_clip
+        print
         # print "\nfocus is: ", self.root.focus_get()
 
 
@@ -210,6 +211,7 @@ class MainWindow:
         self.current_clip.coder = self.codername_entry.get()
         print "you selected ads"
         print self.current_clip
+        print
         # print "\nfocus is: ", self.root.focus_get()
 
     def key_select_neither(self, event):
@@ -223,6 +225,7 @@ class MainWindow:
         self.current_clip.coder = self.codername_entry.get()
         print "you selected neither"
         print self.current_clip
+        print
         # print "\nfocus is: ", self.root.focus_get()
 
     def key_select_junk(self, event):
@@ -236,6 +239,7 @@ class MainWindow:
         self.current_clip.coder = self.codername_entry.get()
         print "you selected junk"
         print self.current_clip
+        print
 
         # print "\nfocus is: ", self.root.focus_get()
 
