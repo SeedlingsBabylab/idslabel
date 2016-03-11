@@ -44,6 +44,7 @@ class Clip:
                                                                                  self.classification,
                                                                                  self.timestamp)
 
+
 class MainWindow:
 
     def __init__(self, master):
@@ -59,12 +60,10 @@ class MainWindow:
         self.processed_clips_in_curr_block = []
         self.processed_clips = []
 
-
         self.root = master                # main GUI context
         self.root.title("IDS Label")      # title of window
         self.root.geometry("800x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
-
 
         self.main_frame.bind("a", self.key_select_ads)
         self.main_frame.bind("i", self.key_select_ids)
@@ -80,7 +79,7 @@ class MainWindow:
 
         self.main_frame.bind("<FocusOut>", self.reset_frame_focus)
 
-        self.main_frame.pack()            # pack() basically sets up/inserts the element (turns it on)
+        self.main_frame.pack()
 
         self.load_clan_button = Button(self.main_frame,
                                           text= "Load Clan File",
@@ -90,7 +89,6 @@ class MainWindow:
                                            text= "Load Audio",
                                            command=self.load_audio)
 
-
         self.load_rand_block_button = Button(self.main_frame,
                                              text="Load Block",
                                              command=self.load_random_conv_block)
@@ -98,7 +96,6 @@ class MainWindow:
         self.load_previous_block_button = Button(self.main_frame,
                                                  text="Previous Block",
                                                  command=self.load_previous_block)
-
 
         self.play_clip_button = Button(self.main_frame,
                                        text="Play Clip",
@@ -112,7 +109,6 @@ class MainWindow:
                                        text="Next Clip",
                                        command=self.next_clip)
 
-
         self.replay_clip_button = Button(self.main_frame,
                                          text="Replay Clip",
                                          command=self.replay_clip)
@@ -124,8 +120,6 @@ class MainWindow:
         self.output_classifications_button = Button(self.main_frame,
                                                     text="Output Classifications",
                                                     command=self.output_classifications)
-
-
 
         self.load_clan_button.grid(row=0, column=0)
         self.load_audio_button.grid(row=0, column=1)
@@ -145,7 +139,6 @@ class MainWindow:
         self.block_list.bind('<<ListboxSelect>>', self.update_curr_clip)
         self.block_list.bind("<FocusIn>", self.reset_frame_focus)
         self.block_count_label = None
-
 
         self.codername_entry = Entry(self.main_frame)
         self.codername_entry.insert(END, "coder name")
@@ -198,7 +191,6 @@ class MainWindow:
         print self.current_clip
         print
         # print "\nfocus is: ", self.root.focus_get()
-
 
     def key_select_ads(self, event):
         self.main_frame.focus_force()
@@ -263,19 +255,15 @@ class MainWindow:
     def shortcut_next_clip(self, event):
         self.next_clip()
 
-
     def reset_frame_focus(self, event):
         self.main_frame.focus_set()
-
 
     def load_clan(self):
         self.clan_file = tkFileDialog.askopenfilename()
         self.parse_clan(self.clan_file)
 
-
     def load_audio(self):
         self.audio_file = tkFileDialog.askopenfilename()
-
 
     def play_clip(self):
 
@@ -304,7 +292,6 @@ class MainWindow:
         stream.close()
 
         p.terminate()
-
 
     def play_whole_block(self):
 
@@ -336,7 +323,6 @@ class MainWindow:
 
         p.terminate()
 
-
     def parse_clan(self, path):
         conversations = []
 
@@ -364,7 +350,6 @@ class MainWindow:
         self.block_count_label.grid(row=8, column=3, columnspan=1)
 
         self.create_random_block_range()
-
 
     def slice_block(self, block):
 
@@ -397,7 +382,6 @@ class MainWindow:
             pipe = sp.Popen(command, stdout=sp.PIPE, bufsize=10**8)
             pipe.communicate()
 
-
     def slice_all_randomized_blocks(self):
 
         for block in self.randomized_blocks:
@@ -407,8 +391,6 @@ class MainWindow:
 
         self.randomized_blocks = list(self.clip_blocks)
         random.shuffle(self.randomized_blocks)
-
-
 
     def filter_conversations(self, conversations):
         filtered_conversations = []
@@ -431,7 +413,6 @@ class MainWindow:
             conv_block = []
 
         return filtered_conversations
-
 
     def create_clips(self, clips, parent_path, block_index):
 
@@ -477,7 +458,6 @@ class MainWindow:
 
         return block
 
-
     def load_previous_block(self):
         print "hello"
 
@@ -515,13 +495,11 @@ class MainWindow:
 
         self.current_clip = self.current_block.clips[self.current_clip.clip_index+1]
 
-
     def previous_clip(self):
         self.block_list.selection_clear(0, END)
         self.block_list.selection_set(self.current_clip.clip_index-1)
 
         self.current_clip = self.current_block.clips[self.current_clip.clip_index-1]
-
 
     def set_curr_clip(self, index):
         self.block_list.selection_clear(0, END)
@@ -529,10 +507,8 @@ class MainWindow:
 
         self.current_clip = self.current_block.clips[index]
 
-
     def replay_clip(self):
         print "hello"
-
 
     def update_curr_clip(self, evt):
         box = evt.widget
@@ -540,7 +516,6 @@ class MainWindow:
         value = box.get(index)
         self.current_clip = self.current_block.clips[index]
         print "\nfocus is: ", self.root.focus_get()
-
 
     def submit_classification(self):
         if self.ids_var.get() == 1 and self.ads_var.get() == 1:
@@ -562,43 +537,11 @@ class MainWindow:
         if self.junk_var.get() == 1:
             self.current_clip.classification = "junk"
 
-
     def reset_classification_buttons(self):
         self.ids_button.deselect()
         self.ads_button.deselect()
         self.neither_button.deselect()
         self.junk_button.deselect()
-
-
-    def slice_audio_file(self, clips):
-
-        clanfilename = clips[0][0][0][0:5]
-        all_blocks_path = os.path.join("clips", clanfilename)
-        if not os.path.exists(all_blocks_path):
-            os.makedirs(all_blocks_path)
-
-        for block in clips:
-            block_path = os.path.join(all_blocks_path, str(block[0][2]))
-            if not os.path.exists(block_path):
-                os.makedirs(block_path)
-
-            for clip in block:
-                command = ["ffmpeg",
-                           "-ss",
-                           str(clip[5]),
-                           "-t",
-                           str(clip[6]),
-                           "-i",
-                           self.audio_file,
-                           os.path.join(block_path, str(clip[3])+".wav"),
-                           "-y"]
-
-                command_string = " ".join(command)
-                print command_string
-
-                pipe = sp.Popen(command, stdout=sp.PIPE, bufsize=10**8)
-                pipe.communicate()  # blocks until the subprocess is complete
-
 
     def ms_to_hhmmss(self, interval):
 
@@ -615,7 +558,6 @@ class MainWindow:
 
         return [start, end, x_diff]
 
-
     def output_classifications(self):
 
         #[date, coder, clanfile, audiofile, block, timestamp, clip, tier, label]
@@ -627,13 +569,11 @@ class MainWindow:
                              "timestamp", "clip", "tier", "label"])
 
             for block in self.randomized_blocks:
-                clan_file = block.clan_file
                 for clip in block.clips:
                     writer.writerow([clip.label_date, clip.coder, clip.clan_file,
                                      clip.parent_audio_path, clip.block_index+1,
                                      clip.timestamp, clip.clip_index,clip.clip_tier,
                                      clip.classification])
-
 
     def blocks_to_csv(self):
 
@@ -642,7 +582,6 @@ class MainWindow:
             writer.writerow(["block", "num_clips"])
             for block in self.clip_blocks:
                 writer.writerow([block.index, block.num_clips])
-
 
 
 if __name__ == "__main__":
