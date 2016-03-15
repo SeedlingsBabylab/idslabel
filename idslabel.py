@@ -65,10 +65,10 @@ class MainWindow:
         self.root.geometry("800x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
 
-        self.main_frame.bind("a", self.key_select_ads)
-        self.main_frame.bind("i", self.key_select_ids)
-        self.main_frame.bind("n", self.key_select_neither)
-        self.main_frame.bind("j", self.key_select_junk)
+        # self.main_frame.bind("a", self.key_select_ads)
+        # self.main_frame.bind("i", self.key_select_ids)
+        # self.main_frame.bind("n", self.key_select_neither)
+        # self.main_frame.bind("j", self.key_select_junk)
         self.main_frame.bind("<Key>", self.key_select)
         self.main_frame.bind("<space>", self.shortcut_play_clip)
         self.main_frame.bind("<Shift-space>", self.shortcut_play_block)
@@ -177,68 +177,41 @@ class MainWindow:
 
         self.main_frame.focus_set()
 
-    def key_select_ids(self, event):
-        self.main_frame.focus_force()
-
-        if not self.current_clip:
-            self.set_curr_clip(0)
-
-        self.current_clip.classification = "IDS"
-        self.current_clip.label_date = time.strftime("%m/%d/%Y")
-        self.current_clip.coder = self.codername_entry.get()
-
-        print "you selected ids"
-        print self.current_clip
-        print
-        # print "\nfocus is: ", self.root.focus_get()
-
-    def key_select_ads(self, event):
-        self.main_frame.focus_force()
-
-        if not self.current_clip:
-            self.set_curr_clip(0)
-
-        self.current_clip.classification = "ADS"
-        self.current_clip.label_date = time.strftime("%m/%d/%Y")
-        self.current_clip.coder = self.codername_entry.get()
-        print "you selected ads"
-        print self.current_clip
-        print
-        # print "\nfocus is: ", self.root.focus_get()
-
-    def key_select_neither(self, event):
-        self.main_frame.focus_force()
-
-        if not self.current_clip:
-            self.set_curr_clip(0)
-
-        self.current_clip.classification = "NEITHER"
-        self.current_clip.label_date = time.strftime("%m/%d/%Y")
-        self.current_clip.coder = self.codername_entry.get()
-        print "you selected neither"
-        print self.current_clip
-        print
-        # print "\nfocus is: ", self.root.focus_get()
-
-    def key_select_junk(self, event):
-        self.main_frame.focus_force()
-
-        if not self.current_clip:
-            self.set_curr_clip(0)
-
-        self.current_clip.classification = "JUNK"
-        self.current_clip.label_date = time.strftime("%m/%d/%Y")
-        self.current_clip.coder = self.codername_entry.get()
-        print "you selected junk"
-        print self.current_clip
-        print
-
-        # print "\nfocus is: ", self.root.focus_get()
-
     def key_select(self, event):
         self.main_frame.focus_set()
-        print "pressed {}".format(repr(event.char))
-        print "\nfocus is: ", self.root.focus_get()
+
+        selected_key = event.char
+
+
+        if selected_key == "i":
+            if not self.current_clip:
+                self.set_curr_clip(0)
+            self.current_clip.classification = "IDS"
+            self.current_clip.label_date = time.strftime("%m/%d/%Y")
+            self.current_clip.coder = self.codername_entry.get()
+
+        if selected_key == "a":
+            if not self.current_clip:
+                self.set_curr_clip(0)
+            self.current_clip.classification = "ADS"
+            self.current_clip.label_date = time.strftime("%m/%d/%Y")
+            self.current_clip.coder = self.codername_entry.get()
+
+        if selected_key == "n":
+            if not self.current_clip:
+                self.set_curr_clip(0)
+            self.current_clip.classification = "NEITHER"
+            self.current_clip.label_date = time.strftime("%m/%d/%Y")
+            self.current_clip.coder = self.codername_entry.get()
+
+        if selected_key == "j":
+            if not self.current_clip:
+                self.set_curr_clip(0)
+            self.current_clip.classification = "JUNK"
+            self.current_clip.label_date = time.strftime("%m/%d/%Y")
+            self.current_clip.coder = self.codername_entry.get()
+
+        print self.current_clip
 
     def shortcut_play_clip(self, event):
         if not self.current_clip:
