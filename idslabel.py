@@ -193,14 +193,12 @@ class MainWindow:
             self.current_clip.coder = self.codername_entry.get()
             self.update_curr_clip_info()
 
-
         if selected_key == "C":
             self.load_clan()
         if selected_key == "A":
             self.load_audio()
         if selected_key == "|":
             self.load_previous_block()
-
 
     def shortcut_play_clip(self, event):
         if not self.current_clip:
@@ -457,7 +455,6 @@ class MainWindow:
 
         self.update_curr_clip_info()
 
-
     def load_random_conv_block(self):
 
 
@@ -490,7 +487,6 @@ class MainWindow:
         self.block_list.selection_set(0)
 
         self.update_curr_clip_info()
-
 
     def update_curr_clip_info(self):
 
@@ -538,9 +534,6 @@ class MainWindow:
         self.block_list.selection_set(index)
 
         self.current_clip = self.current_block.clips[index]
-
-    def replay_clip(self):
-        print "hello"
 
     def update_curr_clip(self, evt):
         box = evt.widget
