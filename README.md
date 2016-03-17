@@ -34,7 +34,8 @@ $: sudo pip install pyaudio
 
 ## usage
 
-You need to "Load Audio" before "Load Clan". Then, "Load Block", click on the clips in the box, and "Play Clip". After selecting one of the classification buttons, "Submit Classification".  
+You need to "Load Audio" before "Load Clan". Then, "Load Block", select the clips in the box, and either click "Play Clip" or use the shortcut
+(spacebar). After selecting one of the classifications (shortcuts listed below), move on to the next clip with the arrow keys.
 
 
 There are keyboard shortcuts for selecting the classification and cycling through the clips:
