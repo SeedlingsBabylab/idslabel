@@ -19,6 +19,7 @@ class Block:
         self.clan_file = clan_file
         self.num_clips = None
         self.clips = []
+        self.sliced = False
 
 
 class Clip:
@@ -62,13 +63,9 @@ class MainWindow:
 
         self.root = master                # main GUI context
         self.root.title("IDS Label")      # title of window
-        self.root.geometry("800x600")     # size of GUI window
+        self.root.geometry("850x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
 
-        # self.main_frame.bind("a", self.key_select_ads)
-        # self.main_frame.bind("i", self.key_select_ids)
-        # self.main_frame.bind("n", self.key_select_neither)
-        # self.main_frame.bind("j", self.key_select_junk)
         self.main_frame.bind("<Key>", self.key_select)
         self.main_frame.bind("<space>", self.shortcut_play_clip)
         self.main_frame.bind("<Shift-space>", self.shortcut_play_block)
@@ -76,6 +73,8 @@ class MainWindow:
         self.main_frame.bind("<Right>", self.shortcut_next_clip)
         self.main_frame.bind("<Up>", self.shortcut_previous_clip)
         self.main_frame.bind("<Down>", self.shortcut_next_clip)
+        self.main_frame.bind("<Shift-Return>", self.shortcut_load_random_block)
+
 
         self.main_frame.bind("<FocusOut>", self.reset_frame_focus)
 
@@ -109,10 +108,6 @@ class MainWindow:
                                        text="Next Clip",
                                        command=self.next_clip)
 
-        self.replay_clip_button = Button(self.main_frame,
-                                         text="Replay Clip",
-                                         command=self.replay_clip)
-
         self.submit_classification_button = Button(self.main_frame,
                                                    text="Submit",
                                                    command=self.submit_classification)
@@ -129,8 +124,6 @@ class MainWindow:
         self.play_clip_button.grid(row=2, column=2)
         self.play_block_button.grid(row=3, column=2)
         self.next_clip_button.grid(row=4, column=2)
-        self.replay_clip_button.grid(row=5, column=2)
-        self.submit_classification_button.grid(row=6, column=2)
         self.output_classifications_button.grid(row=7, column=2)
 
         self.block_list = Listbox(self.main_frame, width=20, height=25)
@@ -140,32 +133,19 @@ class MainWindow:
         self.block_list.bind("<FocusIn>", self.reset_frame_focus)
         self.block_count_label = None
 
-        self.codername_entry = Entry(self.main_frame)
-        self.codername_entry.insert(END, "coder name")
+
+        self.curr_clip_info = Text(self.main_frame, width=50, height=10)
+        self.curr_clip_info.grid(row=1, column=0, rowspan=3, columnspan=2)
+
+
+        self.codername_entry = Entry(self.main_frame, width=10, font="-weight bold")
+        self.codername_entry.insert(END, "CODER NAME")
         self.codername_entry.grid(row=0, column=4)
-
-        self.ids_var = IntVar()
-        self.ids_button = Checkbutton(self.main_frame, text="IDS", variable=self.ids_var)
-
-        self.ads_var = IntVar()
-        self.ads_button = Checkbutton(self.main_frame, text="ADS", variable=self.ads_var)
-
-        self.neither_var = IntVar()
-        self.neither_button = Checkbutton(self.main_frame, text="Neither", variable=self.neither_var)
-
-        self.junk_var = IntVar()
-        self.junk_button = Checkbutton(self.main_frame, text="Junk", variable=self.junk_var)
-
-        self.ids_button.grid(row=2, column=0)
-        self.ads_button.grid(row=3, column=0)
-        self.neither_button.grid(row=4, column=0)
-        self.junk_button.grid(row=5, column=0)
 
         self.classification_conflict_label = None
 
         self.clips_processed_label = None
         self.coded_block_label = None
-        self.convo_blocknum_label = None
 
         self.interval_regx = re.compile("\\x15\d+_\d+\\x15")
 
@@ -182,13 +162,13 @@ class MainWindow:
 
         selected_key = event.char
 
-
         if selected_key == "i":
             if not self.current_clip:
                 self.set_curr_clip(0)
             self.current_clip.classification = "IDS"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
+            self.update_curr_clip_info()
 
         if selected_key == "a":
             if not self.current_clip:
@@ -196,13 +176,14 @@ class MainWindow:
             self.current_clip.classification = "ADS"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
-
+            self.update_curr_clip_info()
         if selected_key == "n":
             if not self.current_clip:
                 self.set_curr_clip(0)
             self.current_clip.classification = "NEITHER"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
+            self.update_curr_clip_info()
 
         if selected_key == "j":
             if not self.current_clip:
@@ -210,8 +191,16 @@ class MainWindow:
             self.current_clip.classification = "JUNK"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
+            self.update_curr_clip_info()
 
-        print self.current_clip
+
+        if selected_key == "C":
+            self.load_clan()
+        if selected_key == "A":
+            self.load_audio()
+        if selected_key == "|":
+            self.load_previous_block()
+
 
     def shortcut_play_clip(self, event):
         if not self.current_clip:
@@ -227,6 +216,9 @@ class MainWindow:
 
     def shortcut_next_clip(self, event):
         self.next_clip()
+
+    def shortcut_load_random_block(self, event):
+        self.load_random_conv_block()
 
     def reset_frame_focus(self, event):
         self.main_frame.focus_set()
@@ -314,13 +306,13 @@ class MainWindow:
         conversation_blocks = self.filter_conversations(conversations)
 
         for index, block in enumerate(conversation_blocks):
-            self.clip_blocks.append(self.create_clips(block, path, index))
+            self.clip_blocks.append(self.create_clips(block, path, index+1))
 
         self.block_count_label = Label(self.main_frame,
                                        text=str(len(conversation_blocks))+\
                                        " blocks")
 
-        self.block_count_label.grid(row=8, column=3, columnspan=1)
+        self.block_count_label.grid(row=7, column=3, columnspan=1)
 
         self.create_random_block_range()
 
@@ -401,9 +393,9 @@ class MainWindow:
             clip_path = os.path.join("clips",
                                      parent_path[0:5],
                                      str(block_index),
-                                     str(index)+".wav")
+                                     str(index+1)+".wav")
 
-            curr_clip = Clip(clip_path, block_index, index)
+            curr_clip = Clip(clip_path, block_index, index+1)
             curr_clip.parent_audio_path = parent_audio_path
             curr_clip.clan_file = parent_path
             curr_clip.clip_tier = clip[1:4]
@@ -432,18 +424,18 @@ class MainWindow:
         return block
 
     def load_previous_block(self):
-        print "hello"
 
-    def load_random_conv_block(self):
-
-        self.block_list.delete(0, END)
 
         if self.current_block_index is None:
             self.current_block_index = 0
+        elif self.current_block_index == 0:
+            return
         elif self.current_block_index == len(self.randomized_blocks):
             print "That's the last block"
         else:
-            self.current_block_index += 1
+            self.current_block_index -= 1
+
+        self.block_list.delete(0, END)
 
         self.current_block = self.randomized_blocks[self.current_block_index]
 
@@ -458,21 +450,88 @@ class MainWindow:
         self.coded_block_label = Label(self.main_frame, text="coded block #{}".format(self.current_block_index + 1))
         self.coded_block_label.grid(row=6, column=3)
 
-        self.convo_blocknum_label = Label(self.main_frame, text="convo block #{}".format(self.current_block.index))
-        self.convo_blocknum_label.grid(row=7, column=3)
+        self.current_clip = self.current_block.clips[0]
+
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(0)
+
+        self.update_curr_clip_info()
+
+
+    def load_random_conv_block(self):
+
+
+
+        if self.current_block_index is None:
+            self.current_block_index = 0
+        elif self.current_block_index == len(self.randomized_blocks):
+            print "That's the last block"
+        else:
+            self.current_block_index += 1
+
+        self.block_list.delete(0, END)
+
+        self.current_block = self.randomized_blocks[self.current_block_index]
+
+        self.slice_block(self.current_block)
+
+        for index, element in enumerate(self.randomized_blocks[self.current_block_index].clips):
+            if element.multiline:
+                self.block_list.insert(index, element.clip_tier+" ^-")
+            else:
+                self.block_list.insert(index, element.clip_tier)
+
+        self.coded_block_label = Label(self.main_frame, text="coded block #{}".format(self.current_block_index + 1))
+        self.coded_block_label.grid(row=6, column=3)
+
+        self.current_clip = self.current_block.clips[0]
+
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(0)
+
+        self.update_curr_clip_info()
+
+
+    def update_curr_clip_info(self):
+
+        self.curr_clip_info.configure(state="normal")
+        self.curr_clip_info.delete("1.0", END)
+
+        self.curr_clip_info.insert('1.0',
+                                   "clip:         {}\nblock:        {}\ntier:         {}\nlabel:        {}\ntime:         {}\nclip length:  {}\ncoder:        {}\nclan file:    {}".
+                                                            format(self.current_clip.clip_index,
+                                                                   self.current_clip.block_index,
+                                                                   self.current_clip.clip_tier,
+                                                                   self.current_clip.classification,
+                                                                   self.current_clip.timestamp,
+                                                                   self.current_clip.offset_time,
+                                                                   self.current_clip.coder,
+                                                                   self.current_clip.clan_file))
+
+        self.curr_clip_info.configure(state="disabled")
 
     def next_clip(self):
 
+        if self.current_clip.clip_index == len(self.current_block.clips):
+            return
         self.block_list.selection_clear(0, END)
-        self.block_list.selection_set(self.current_clip.clip_index+1)
+        self.block_list.selection_set(self.current_clip.clip_index)
 
-        self.current_clip = self.current_block.clips[self.current_clip.clip_index+1]
+        self.current_clip = self.current_block.clips[self.current_clip.clip_index]
+
+        self.update_curr_clip_info()
 
     def previous_clip(self):
-        self.block_list.selection_clear(0, END)
-        self.block_list.selection_set(self.current_clip.clip_index-1)
 
-        self.current_clip = self.current_block.clips[self.current_clip.clip_index-1]
+        if self.current_clip.clip_index == 1:
+            return
+
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(self.current_clip.clip_index-2)
+
+        self.current_clip = self.current_block.clips[self.current_clip.clip_index-2]
+
+        self.update_curr_clip_info()
 
     def set_curr_clip(self, index):
         self.block_list.selection_clear(0, END)
@@ -488,7 +547,7 @@ class MainWindow:
         index = int(box.curselection()[0])
         value = box.get(index)
         self.current_clip = self.current_block.clips[index]
-        print "\nfocus is: ", self.root.focus_get()
+        self.update_curr_clip_info()
 
     def submit_classification(self):
         if self.ids_var.get() == 1 and self.ads_var.get() == 1:
