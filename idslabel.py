@@ -10,7 +10,10 @@ import subprocess as sp
 
 from Tkinter import *
 import tkFileDialog
+from tkMessageBox import showwarning
 
+
+version = "0.1"
 
 class Block:
     def __init__(self, index, clan_file):
@@ -20,7 +23,6 @@ class Block:
         self.num_clips = None
         self.clips = []
         self.sliced = False
-
 
 class Clip:
     def __init__(self, path, block_index, clip_index):
@@ -45,7 +47,6 @@ class Clip:
                                                                                  self.classification,
                                                                                  self.timestamp)
 
-
 class MainWindow:
 
     def __init__(self, master):
@@ -62,7 +63,7 @@ class MainWindow:
         self.processed_clips = []
 
         self.root = master                # main GUI context
-        self.root.title("IDS Label")      # title of window
+        self.root.title("IDS Label  v"+version)      # title of window
         self.root.geometry("850x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
 
@@ -75,6 +76,23 @@ class MainWindow:
         self.main_frame.bind("<Down>", self.shortcut_next_clip)
         self.main_frame.bind("<Shift-Return>", self.shortcut_load_random_block)
 
+
+        self.menubar = Menu(self.root)
+
+        self.filemenu = Menu(self.menubar, tearoff=0)
+        self.filemenu.add_command(label="Load Audio", command=self.load_audio)
+        self.filemenu.add_command(label="Load Clan", command=self.load_clan)
+        self.filemenu.add_command(label="Save Classifications", command=self.output_classifications)
+
+        self.menubar.add_cascade(label="File", menu=self.filemenu)
+
+
+        self.helpmenu= Menu(self.menubar, tearoff=0)
+        self.helpmenu.add_command(label="Show Shortcuts", command=self.show_shortcuts)
+
+        self.menubar.add_cascade(label="Help", menu=self.helpmenu)
+
+        self.root.config(menu=self.menubar)
 
         self.main_frame.bind("<FocusOut>", self.reset_frame_focus)
 
@@ -108,10 +126,6 @@ class MainWindow:
                                        text="Next Clip",
                                        command=self.next_clip)
 
-        self.submit_classification_button = Button(self.main_frame,
-                                                   text="Submit",
-                                                   command=self.submit_classification)
-
         self.output_classifications_button = Button(self.main_frame,
                                                     text="Output Classifications",
                                                     command=self.output_classifications)
@@ -126,7 +140,7 @@ class MainWindow:
         self.next_clip_button.grid(row=4, column=2)
         self.output_classifications_button.grid(row=7, column=2)
 
-        self.block_list = Listbox(self.main_frame, width=20, height=25)
+        self.block_list = Listbox(self.main_frame, width=15, height=25)
         self.block_list.grid(row=1, column=3, rowspan=5)
 
         self.block_list.bind('<<ListboxSelect>>', self.update_curr_clip)
@@ -156,6 +170,10 @@ class MainWindow:
         self.slicing_process = None
 
         self.main_frame.focus_set()
+
+        self.shortcuts_menu = None
+
+        # showwarning("Note", "Remember to write your name in the 'CODER NAME' box before starting")
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -199,6 +217,8 @@ class MainWindow:
             self.load_audio()
         if selected_key == "|":
             self.load_previous_block()
+        if selected_key == "O":
+            self.output_classifications()
 
     def shortcut_play_clip(self, event):
         if not self.current_clip:
@@ -223,6 +243,7 @@ class MainWindow:
 
     def load_clan(self):
         self.clan_file = tkFileDialog.askopenfilename()
+        showwarning("Note", "Remember to write your name in the 'CODER NAME' box before starting")
         self.parse_clan(self.clan_file)
 
     def load_audio(self):
@@ -517,6 +538,8 @@ class MainWindow:
 
         self.update_curr_clip_info()
 
+        self.block_list.see(self.current_clip.clip_index-1)
+
     def previous_clip(self):
 
         if self.current_clip.clip_index == 1:
@@ -528,6 +551,8 @@ class MainWindow:
         self.current_clip = self.current_block.clips[self.current_clip.clip_index-2]
 
         self.update_curr_clip_info()
+
+        self.block_list.see(self.current_clip.clip_index-1)
 
     def set_curr_clip(self, index):
         self.block_list.selection_clear(0, END)
@@ -541,32 +566,6 @@ class MainWindow:
         value = box.get(index)
         self.current_clip = self.current_block.clips[index]
         self.update_curr_clip_info()
-
-    def submit_classification(self):
-        if self.ids_var.get() == 1 and self.ads_var.get() == 1:
-            self.classification_conflict_label = Label(self.main_frame,
-                                                       text="can't be both IDS and ADS")
-
-            self.classification_conflict_label.grid(row=6, column=0)
-            return
-
-        if self.classification_conflict_label:
-            self.classification_conflict_label.grid_remove()
-
-        if self.ids_var.get() == 1:
-            self.current_clip.classification = "ids"
-        if self.ads_var.get() == 1:
-            self.current_clip.classification = "ads"
-        if self.neither_var.get() == 1:
-            self.current_clip.classification = "neither"
-        if self.junk_var.get() == 1:
-            self.current_clip.classification = "junk"
-
-    def reset_classification_buttons(self):
-        self.ids_button.deselect()
-        self.ads_button.deselect()
-        self.neither_button.deselect()
-        self.junk_button.deselect()
 
     def ms_to_hhmmss(self, interval):
 
@@ -608,6 +607,55 @@ class MainWindow:
             for block in self.clip_blocks:
                 writer.writerow([block.index, block.num_clips])
 
+    def show_shortcuts(self):
+        self.shortcuts_menu = Toplevel()
+        self.shortcuts_menu.title("Shortcuts")
+        self.shortcuts_menu.geometry("350x400")
+        textbox = Text(self.shortcuts_menu)
+        textbox.pack()
+
+
+        general = "General Keys:\n\n"
+        load_audio      = "\tshift + a     : load audio file\n"
+        load_clan       = "\tshift + c     : load clan file\n"
+        load_block      = "\tshift + enter : load random block\n"
+        load_prev_block = "\tshift + \     : load previous block\n"
+        output_labels   = "\tshift + o     : output classifications\n"
+
+        classification = "\nClassification Keys:\n\n"
+        ids = "\ti : IDS\n"
+        ads = "\ta : ADS\n"
+        neith = "\tn : Neither\n"
+        junk = "\tj : Junk\n"
+
+        clips = "\nClip Navigation/Playback Keys:\n\n"
+        up         = "\tup            : previous clip\n"
+        left       = "\tleft          : previous clip\n"
+        down       = "\tdown          : next clip\n"
+        right      = "\tright         : next clip\n"
+        space      = "\tspace         : play clip\n"
+        shft_space = "\tshift + space : play whole block\n"
+
+        textbox.insert('1.0', general+\
+                                load_audio+\
+                                load_clan+\
+                                load_block+\
+                                load_prev_block+\
+                                output_labels+\
+                                classification+\
+                                ids+\
+                                ads+
+                                neith+\
+                                junk+\
+                                clips+\
+                                up+
+                                left+\
+                                down+\
+                                right+\
+                                space+\
+                                shft_space)
+
+        textbox.configure(state="disabled")
 
 if __name__ == "__main__":
 
