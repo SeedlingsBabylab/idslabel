@@ -33,6 +33,7 @@ class Clip:
         self.clip_index = clip_index
         self.clip_tier = None
         self.multiline = False
+        self.multi_tier_parent = None
         self.start_time = None
         self.offset_time = None
         self.timestamp = None
@@ -257,6 +258,9 @@ class MainWindow:
         clip_path = self.current_block.clips[clip_index].audio_path
         chunk = 1024
 
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(self.current_clip.clip_index)
+
         f = wave.open(clip_path,"rb")
 
         p = pyaudio.PyAudio()
@@ -291,6 +295,7 @@ class MainWindow:
                         output = True)
 
         for clip in self.current_block.clips:
+
             clip_path = clip.audio_path
 
 
@@ -324,8 +329,11 @@ class MainWindow:
 
         conversation_blocks = self.filter_conversations(conversations)
 
+
         for index, block in enumerate(conversation_blocks):
             self.clip_blocks.append(self.create_clips(block, path, index+1))
+
+        self.find_multitier_parents()
 
         self.block_count_label = Label(self.main_frame,
                                        text=str(len(conversation_blocks))+\
@@ -398,6 +406,21 @@ class MainWindow:
 
         return filtered_conversations
 
+    def find_multitier_parents(self):
+
+        for block in self.clip_blocks:
+            for clip in block.clips:
+                if clip.multiline:
+                    self.reverse_parent_lookup(block, clip)
+
+    def reverse_parent_lookup(self, block, multi_clip):
+        for clip in reversed(block.clips[0:multi_clip.clip_index-1]):
+            if clip.multiline:
+                continue
+            else:
+                multi_clip.multi_tier_parent = clip.timestamp
+                return
+
     def create_clips(self, clips, parent_path, block_index):
 
         parent_path = os.path.split(parent_path)[1]
@@ -444,7 +467,6 @@ class MainWindow:
 
     def load_previous_block(self):
 
-
         if self.current_block_index is None:
             self.current_block_index = 0
         elif self.current_block_index == 0:
@@ -477,8 +499,6 @@ class MainWindow:
         self.update_curr_clip_info()
 
     def load_random_conv_block(self):
-
-
 
         if self.current_block_index is None:
             self.current_block_index = 0
@@ -561,6 +581,8 @@ class MainWindow:
         self.current_clip = self.current_block.clips[index]
 
     def update_curr_clip(self, evt):
+        if self.block_list.size() == 0:
+            return
         box = evt.widget
         index = int(box.curselection()[0])
         value = box.get(index)
@@ -590,14 +612,20 @@ class MainWindow:
         with open(output_path, "wb") as output:
             writer = csv.writer(output)
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label"])
+                             "timestamp", "clip", "tier", "label", "multi-tier"])
 
             for block in self.randomized_blocks:
+                multitier_parent = None
                 for clip in block.clips:
+                    if clip.multiline:
+                        multitier_parent = clip.multi_tier_parent
+                    else:
+                        multitier_parent = "N"
+
                     writer.writerow([clip.label_date, clip.coder, clip.clan_file,
                                      clip.parent_audio_path, clip.block_index+1,
                                      clip.timestamp, clip.clip_index,clip.clip_tier,
-                                     clip.classification])
+                                     clip.classification, multitier_parent])
 
     def blocks_to_csv(self):
 
