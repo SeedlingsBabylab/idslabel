@@ -175,6 +175,8 @@ class MainWindow:
 
         self.shortcuts_menu = None
 
+        self.curr_clip_info.configure(state="disabled")
+
     def key_select(self, event):
         self.main_frame.focus_set()
 
@@ -483,7 +485,7 @@ class MainWindow:
 
         for index, element in enumerate(self.randomized_blocks[self.current_block_index].clips):
             if element.multiline:
-                self.block_list.insert(index, element.clip_tier+" ^-")
+                self.block_list.insert(index, element.clip_tier+" ^--")
             else:
                 self.block_list.insert(index, element.clip_tier)
 
@@ -514,7 +516,7 @@ class MainWindow:
 
         for index, element in enumerate(self.randomized_blocks[self.current_block_index].clips):
             if element.multiline:
-                self.block_list.insert(index, element.clip_tier+" ^-")
+                self.block_list.insert(index, element.clip_tier+" ^--")
             else:
                 self.block_list.insert(index, element.clip_tier)
 
@@ -611,7 +613,7 @@ class MainWindow:
         with open(output_path, "wb") as output:
             writer = csv.writer(output)
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "multi-tier"])
+                             "timestamp", "clip", "tier", "label", "multi-tier-parent"])
 
             for block in self.randomized_blocks:
                 multitier_parent = None
@@ -685,19 +687,23 @@ class MainWindow:
         textbox.configure(state="disabled")
 
     def show_about(self):
+        global version
         self.about_page = Toplevel()
         self.about_page.title("About")
-        self.about_page.geometry("400x400")
-        textbox = Text(self.about_page)
+        self.about_page.geometry("450x400")
+        textbox = Text(self.about_page, width=55, height=30)
         textbox.pack()
 
-        textbox.tag_config(0, justify="center")
+        textbox.tag_add("all", "1.0", END)
+        textbox.tag_add("title", "1.0", "2.0")
+        textbox.tag_config("all", justify="center")
+        textbox.tag_config("title", font=("Georgia", "12", "bold"))
 
-
-        name = "IDS Label\n\n"
+        name = "\n\n\n\nIDS Label\n"
+        version = "v{}\n\n".format(version)
         author = "author: Andrei Amatuni\n"
         homepage = "homepage: https://github.com/SeedlingsBabylab/idslabel"
-        textbox.insert('1.0', name+author+homepage)
+        textbox.insert('1.0', name+version+author+homepage)
 
         textbox.configure(state="disabled")
 
