@@ -64,15 +64,15 @@ There are keyboard shortcuts for selecting the classification and cycling throug
 
 Tiers which are composed of multiple lines, e.g. :
 ```
-*CHN:	0 2662230_2662370  
-  &=vocalization 2662370_2663380   
-  0 . 2663380_2663480
+*CHN:	0 2662230_2662370
+  &=vocalization 2662370_2663380
+  0 . 2663380_2663480
 ```
 have a symbol associated with them to signify they're part of the unit ( " ^- " , it's supposed to be an arrow pointinng to the parent tier)
 
 In the classification output, if clips are associated together as part of a multi-line tier, the value in the "multi-tier"
 column will be the timestamp of the parent line that they're associated to. In the example provided above, the line with
-the timestamp of 2662230_2662370 will be the parent to the following 2 lines.
+the timestamp of 2662230_2662370 will be the parent to the following 2 lines.
 
 
 
