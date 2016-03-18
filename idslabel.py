@@ -89,6 +89,7 @@ class MainWindow:
 
 
         self.helpmenu= Menu(self.menubar, tearoff=0)
+        self.helpmenu.add_command(label="About", command=self.show_about)
         self.helpmenu.add_command(label="Show Shortcuts", command=self.show_shortcuts)
 
         self.menubar.add_cascade(label="Help", menu=self.helpmenu)
@@ -173,8 +174,6 @@ class MainWindow:
         self.main_frame.focus_set()
 
         self.shortcuts_menu = None
-
-        # showwarning("Note", "Remember to write your name in the 'CODER NAME' box before starting")
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -606,7 +605,7 @@ class MainWindow:
 
     def output_classifications(self):
 
-        #[date, coder, clanfile, audiofile, block, timestamp, clip, tier, label]
+        #[date, coder, clanfile, audiofile, block, timestamp, clip, tier, label, multi-tier]
         output_path = tkFileDialog.asksaveasfilename()
 
         with open(output_path, "wb") as output:
@@ -682,6 +681,23 @@ class MainWindow:
                                 right+\
                                 space+\
                                 shft_space)
+
+        textbox.configure(state="disabled")
+
+    def show_about(self):
+        self.about_page = Toplevel()
+        self.about_page.title("About")
+        self.about_page.geometry("400x400")
+        textbox = Text(self.about_page)
+        textbox.pack()
+
+        textbox.tag_config(0, justify="center")
+
+
+        name = "IDS Label\n\n"
+        author = "author: Andrei Amatuni\n"
+        homepage = "homepage: https://github.com/SeedlingsBabylab/idslabel"
+        textbox.insert('1.0', name+author+homepage)
 
         textbox.configure(state="disabled")
 
