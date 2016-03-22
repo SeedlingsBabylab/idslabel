@@ -13,7 +13,7 @@ import tkFileDialog
 from tkMessageBox import showwarning
 
 
-version = "0.1"
+version = "0.0.1"
 
 class Block:
     def __init__(self, index, clan_file):
@@ -64,7 +64,7 @@ class MainWindow:
         self.processed_clips = []
 
         self.root = master                # main GUI context
-        self.root.title("IDS Label  v"+version)      # title of window
+        self.root.title("IDS Label  "+version)      # title of window
         self.root.geometry("850x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
 
@@ -700,7 +700,7 @@ class MainWindow:
         textbox.tag_config("title", font=("Georgia", "12", "bold"))
 
         name = "\n\n\n\nIDS Label\n"
-        version = "v{}\n\n".format(version)
+        version = "{}\n\n".format(version)
         author = "author: Andrei Amatuni\n"
         homepage = "homepage: https://github.com/SeedlingsBabylab/idslabel"
         textbox.insert('1.0', name+version+author+homepage)
