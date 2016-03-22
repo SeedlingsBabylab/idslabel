@@ -64,7 +64,7 @@ class MainWindow:
         self.processed_clips = []
 
         self.root = master                # main GUI context
-        self.root.title("IDS Label  "+version)      # title of window
+        self.root.title("IDS Label  v"+version)      # title of window
         self.root.geometry("850x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
 
@@ -259,8 +259,8 @@ class MainWindow:
         clip_path = self.current_block.clips[clip_index].audio_path
         chunk = 1024
 
-        self.block_list.selection_clear(0, END)
-        self.block_list.selection_set(self.current_clip.clip_index)
+        # self.block_list.selection_clear(0, END)
+        # self.block_list.selection_set(self.current_clip.clip_index)
 
         f = wave.open(clip_path,"rb")
 
@@ -355,11 +355,15 @@ class MainWindow:
 
         block_path = os.path.join(all_blocks_path, str(block.index))
 
+
         if not os.path.exists(block_path):
             os.makedirs(block_path)
 
+        # showwarning("working directory", "{}".format(os.getcwd()))
+
+        out, err = None, None
         for clip in block.clips:
-            command = ["ffmpeg",
+            command = ["./ffmpeg",
                        "-ss",
                        str(clip.start_time),
                        "-t",
@@ -373,7 +377,9 @@ class MainWindow:
             print command_string
 
             pipe = sp.Popen(command, stdout=sp.PIPE, bufsize=10**8)
-            pipe.communicate()
+            out, err = pipe.communicate()
+        # showwarning("command output", "{}".format(out))
+        # showwarning("command err", "{}".format(err))
 
     def slice_all_randomized_blocks(self):
 
@@ -700,7 +706,7 @@ class MainWindow:
         textbox.tag_config("title", font=("Georgia", "12", "bold"))
 
         name = "\n\n\n\nIDS Label\n"
-        version = "{}\n\n".format(version)
+        version = "v{}\n\n".format(version)
         author = "author: Andrei Amatuni\n"
         homepage = "homepage: https://github.com/SeedlingsBabylab/idslabel"
         textbox.insert('1.0', name+version+author+homepage)

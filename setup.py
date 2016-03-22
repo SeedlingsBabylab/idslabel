@@ -8,7 +8,7 @@ Usage:
 from setuptools import setup
 
 APP = ['idslabel.py']
-DATA_FILES = ['idslabel.icns']
+DATA_FILES = ['include/idslabel.icns', 'include/ffmpeg']
 OPTIONS = {'argv_emulation': True,
            'plist': {
                'CFBundleIconFile': 'idslabel.icns'
@@ -18,9 +18,11 @@ VERSION="0.0.1"
 
 setup(
     app=APP,
+    name='IDSLabel',
     data_files=DATA_FILES,
     version=VERSION,
     iconfile="idslabel.icns",
+    resources='include',
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
 )

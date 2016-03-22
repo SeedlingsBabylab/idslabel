@@ -1,3 +1,5 @@
 .ropeproject
 .idea
 *.wav
+dist
+build
