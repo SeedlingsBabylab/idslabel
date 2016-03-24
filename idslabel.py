@@ -23,6 +23,8 @@ class Block:
         self.num_clips = None
         self.clips = []
         self.sliced = False
+        self.contains_fan_or_man = False
+        self.dont_share = False
 
 class Clip:
     def __init__(self, path, block_index, clip_index):
@@ -40,6 +42,7 @@ class Clip:
         self.classification = None
         self.label_date = None
         self.coder = None
+
 
     def __repr__(self):
         return "clip: {} - [block: {}] [tier: {}] [label: {}] [time: {}]".format(self.clip_index,
@@ -65,7 +68,7 @@ class MainWindow:
 
         self.root = master                # main GUI context
         self.root.title("IDS Label  v"+version)      # title of window
-        self.root.geometry("850x600")     # size of GUI window
+        self.root.geometry("880x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
 
         self.main_frame.bind("<Key>", self.key_select)
@@ -154,7 +157,7 @@ class MainWindow:
         self.curr_clip_info.grid(row=1, column=0, rowspan=3, columnspan=2)
 
 
-        self.codername_entry = Entry(self.main_frame, width=10, font="-weight bold")
+        self.codername_entry = Entry(self.main_frame, width=15, font="-weight bold")
         self.codername_entry.insert(END, "CODER NAME")
         self.codername_entry.grid(row=0, column=4)
 
@@ -177,15 +180,31 @@ class MainWindow:
 
         self.curr_clip_info.configure(state="disabled")
 
+        self.block_condition_var = IntVar()
+        self.block_condition_button = Checkbutton(self.main_frame, text="only load blocks with\nat least 1 FAN/MAN\ntier", variable=self.block_condition_var)
+        self.block_condition_button.select()
+        self.block_condition_button.grid(row=1, column=4)
+
+        self.dont_share_var = IntVar()
+        self.dont_share_button = Checkbutton(self.main_frame,
+                                             text="don't share this block",
+                                             variable=self.dont_share_var,
+                                             command=self.set_curr_block_dontshare)
+
+        self.dont_share_button.grid(row=2, column=4)
+
+        self.loaded_block_history = []
+        self.on_first_block = False
+
     def key_select(self, event):
         self.main_frame.focus_set()
 
         selected_key = event.char
 
-        if selected_key == "i":
+        if selected_key == "c":
             if not self.current_clip:
                 self.set_curr_clip(0)
-            self.current_clip.classification = "IDS"
+            self.current_clip.classification = "CDS"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
             self.update_curr_clip_info()
@@ -200,7 +219,7 @@ class MainWindow:
         if selected_key == "n":
             if not self.current_clip:
                 self.set_curr_clip(0)
-            self.current_clip.classification = "NEITHER"
+            self.current_clip.classification = "CHILD_NOISE"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
             self.update_curr_clip_info()
@@ -209,6 +228,22 @@ class MainWindow:
             if not self.current_clip:
                 self.set_curr_clip(0)
             self.current_clip.classification = "JUNK"
+            self.current_clip.label_date = time.strftime("%m/%d/%Y")
+            self.current_clip.coder = self.codername_entry.get()
+            self.update_curr_clip_info()
+
+        if selected_key == "r":
+            if not self.current_clip:
+                self.set_curr_clip(0)
+            self.current_clip.classification = "REGISTER_SWITCH"
+            self.current_clip.label_date = time.strftime("%m/%d/%Y")
+            self.current_clip.coder = self.codername_entry.get()
+            self.update_curr_clip_info()
+
+        if selected_key == "m":
+            if not self.current_clip:
+                self.set_curr_clip(0)
+            self.current_clip.classification = "MULTIPLE_ADDR"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
             self.update_curr_clip_info()
@@ -344,6 +379,11 @@ class MainWindow:
 
         self.create_random_block_range()
 
+        # for block in self.randomized_blocks:
+        #     print "{}".format(block.index)
+        #
+        # self.output_classifications()
+
     def slice_block(self, block):
 
         clanfilename = block.clan_file[0:5]
@@ -468,7 +508,13 @@ class MainWindow:
 
         block.num_clips = len(block.clips)
 
-        self.blocks_to_csv()
+        #self.blocks_to_csv()
+
+        for clip in block.clips:
+            if clip.clip_tier == "FAN":
+                block.contains_fan_or_man = True
+            if clip.clip_tier == "MAN":
+                block.contains_fan_or_man = True
 
         return block
 
@@ -481,7 +527,9 @@ class MainWindow:
         elif self.current_block_index == len(self.randomized_blocks):
             print "That's the last block"
         else:
-            self.current_block_index -= 1
+            #self.current_block_index -= 1
+            last_curr_block = self.loaded_block_history.index(self.current_block_index)
+            self.current_block_index = self.loaded_block_history[last_curr_block-1]
 
         self.block_list.delete(0, END)
 
@@ -506,17 +554,28 @@ class MainWindow:
         self.update_curr_clip_info()
 
     def load_random_conv_block(self):
-
-        if self.current_block_index is None:
+        if not self.current_block:
             self.current_block_index = 0
-        elif self.current_block_index == len(self.randomized_blocks):
-            print "That's the last block"
+            self.current_block = self.randomized_blocks[0]
+            self.on_first_block = True
         else:
-            self.current_block_index += 1
+            self.on_first_block = False
+
+        if self.block_condition_var.get() == 1:
+            if not self.on_first_block:
+                self.move_currblock_forward()
+                self.current_block = self.randomized_blocks[self.current_block_index]
+            while not self.current_block.contains_fan_or_man:
+                self.move_currblock_forward()
+                self.current_block = self.randomized_blocks[self.current_block_index]
+        else:
+            self.move_currblock_forward()
+            self.current_block = self.randomized_blocks[self.current_block_index]
 
         self.block_list.delete(0, END)
 
-        self.current_block = self.randomized_blocks[self.current_block_index]
+        if self.current_block_index not in self.loaded_block_history:
+            self.loaded_block_history.append(self.current_block_index)
 
         self.slice_block(self.current_block)
 
@@ -535,6 +594,14 @@ class MainWindow:
         self.block_list.selection_set(0)
 
         self.update_curr_clip_info()
+
+    def move_currblock_forward(self):
+        if self.current_block_index is None:
+            self.current_block_index = 0
+        elif self.current_block_index == len(self.randomized_blocks):
+            print "That's the last block"
+        else:
+            self.current_block_index += 1
 
     def update_curr_clip_info(self):
 
@@ -587,6 +654,13 @@ class MainWindow:
 
         self.current_clip = self.current_block.clips[index]
 
+    def set_curr_block_dontshare(self):
+        if self.current_block:
+            if self.dont_share_var.get() == 1:
+                self.current_block.dont_share = True
+            else:
+                self.current_block.dont_share = False
+
     def update_curr_clip(self, evt):
         if self.block_list.size() == 0:
             return
@@ -622,6 +696,9 @@ class MainWindow:
                              "timestamp", "clip", "tier", "label", "multi-tier-parent"])
 
             for block in self.randomized_blocks:
+                dont_share = False
+                if block.dont_share:
+                    dont_share = True
                 multitier_parent = None
                 for clip in block.clips:
                     if clip.multiline:
@@ -630,9 +707,9 @@ class MainWindow:
                         multitier_parent = "N"
 
                     writer.writerow([clip.label_date, clip.coder, clip.clan_file,
-                                     clip.parent_audio_path, clip.block_index+1,
+                                     clip.parent_audio_path, clip.block_index,
                                      clip.timestamp, clip.clip_index,clip.clip_tier,
-                                     clip.classification, multitier_parent])
+                                     clip.classification, multitier_parent, dont_share])
 
     def blocks_to_csv(self):
 
@@ -658,10 +735,12 @@ class MainWindow:
         output_labels   = "\tshift + o     : output classifications\n"
 
         classification = "\nClassification Keys:\n\n"
-        ids = "\ti : IDS\n"
-        ads = "\ta : ADS\n"
-        neith = "\tn : Neither\n"
-        junk = "\tj : Junk\n"
+        ids        = "\tc : CDS\n"
+        ads        = "\ta : ADS\n"
+        noise      = "\tn : Child Noises\n"
+        reg_switch = "\tr : Register Switch\n"
+        mult_addr  = "\tm : Multiple Addressee\n"
+        junk       = "\tj : Junk\n"
 
         clips = "\nClip Navigation/Playback Keys:\n\n"
         up         = "\tup            : previous clip\n"
@@ -680,7 +759,9 @@ class MainWindow:
                                 classification+\
                                 ids+\
                                 ads+
-                                neith+\
+                                noise+\
+                                reg_switch+\
+                                mult_addr+\
                                 junk+\
                                 clips+\
                                 up+

@@ -47,9 +47,11 @@ There are keyboard shortcuts for selecting the classification and cycling throug
  - shift + \ : load previous block
 
 - Classification Keys
- - i : IDS
+ - c : CDS
  - a : ADS
- - n : Neither
+ - n : Child Noises
+ - m : Multiple Addressee
+ - r : Register Switch
  - j : Junk
 
 - Clip Keys
