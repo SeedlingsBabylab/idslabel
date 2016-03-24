@@ -13,7 +13,7 @@ import tkFileDialog
 from tkMessageBox import showwarning
 
 
-version = "0.0.1"
+version = "0.0.2"
 
 class Block:
     def __init__(self, index, clan_file):
