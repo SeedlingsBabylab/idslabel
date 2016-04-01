@@ -45,6 +45,8 @@ There are keyboard shortcuts for selecting the classification and cycling throug
  - shift + c : load clan file
  - shift + enter : load random block
  - shift + \ : load previous block
+ - cmd   + s : save classifications (Mac)
+ - ctrl  + s : save classifications (Linux & Windows)
 
 - Classification Keys
  - c : CDS
