@@ -13,7 +13,7 @@ import tkFileDialog
 from tkMessageBox import showwarning
 
 
-version = "0.0.2"
+version = "0.0.3"
 
 class Block:
     def __init__(self, index, clan_file):
@@ -80,6 +80,12 @@ class MainWindow:
         self.main_frame.bind("<Down>", self.shortcut_next_clip)
         self.main_frame.bind("<Shift-Return>", self.shortcut_load_random_block)
 
+        if sys.platform == "darwin":
+            self.main_frame.bind("<Command-s>", self.save_classifications)
+        if sys.platform == "linux2":
+            self.main_frame.bind("<Control-s>", self.save_classifications)
+        if sys.platform == "win32":
+            self.main_frame.bind("<Control-s>", self.save_classifications)
 
         self.menubar = Menu(self.root)
 
@@ -132,7 +138,7 @@ class MainWindow:
                                        command=self.next_clip)
 
         self.output_classifications_button = Button(self.main_frame,
-                                                    text="Output Classifications",
+                                                    text="Save Classifications",
                                                     command=self.output_classifications)
 
         self.load_clan_button.grid(row=0, column=0)
@@ -195,6 +201,10 @@ class MainWindow:
 
         self.loaded_block_history = []
         self.on_first_block = False
+
+        self.classification_output = ""
+
+        self.clip_directory = ""
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -280,8 +290,19 @@ class MainWindow:
 
     def load_clan(self):
         self.clan_file = tkFileDialog.askopenfilename()
+
+        showwarning("Clips", "Please choose a folder to store audio clips")
+        self.set_clip_path()
+
+        showwarning("Output", "Please create a classification output file")
+        self.set_classification_output()
+        self.output_classifications()
+
         showwarning("Note", "Remember to write your name in the 'CODER NAME' box before starting")
+
         self.parse_clan(self.clan_file)
+
+
 
     def load_audio(self):
         self.audio_file = tkFileDialog.askopenfilename()
@@ -388,7 +409,7 @@ class MainWindow:
 
         clanfilename = block.clan_file[0:5]
 
-        all_blocks_path = os.path.join("clips", clanfilename)
+        all_blocks_path = os.path.join(self.clip_directory, clanfilename)
 
         if not os.path.exists(all_blocks_path):
             os.makedirs(all_blocks_path)
@@ -479,7 +500,7 @@ class MainWindow:
 
         for index, clip in enumerate(clips):
 
-            clip_path = os.path.join("clips",
+            clip_path = os.path.join(self.clip_directory,
                                      parent_path[0:5],
                                      str(block_index),
                                      str(index+1)+".wav")
@@ -691,12 +712,22 @@ class MainWindow:
 
         return [start, end, x_diff]
 
+
+    def set_clip_path(self):
+        self.clip_directory = tkFileDialog.askdirectory()
+        print self.clip_directory
+
+    def set_classification_output(self):
+        self.classification_output = tkFileDialog.asksaveasfilename()
+
+    def save_classifications(self, event):
+        self.output_classifications()
+
     def output_classifications(self):
 
         #[date, coder, clanfile, audiofile, block, timestamp, clip, tier, label, multi-tier]
-        output_path = tkFileDialog.asksaveasfilename()
 
-        with open(output_path, "wb") as output:
+        with open(self.classification_output, "wb") as output:
             writer = csv.writer(output)
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
                              "timestamp", "clip", "tier", "label", "multi-tier-parent", "dont_share"])
@@ -728,7 +759,7 @@ class MainWindow:
     def show_shortcuts(self):
         self.shortcuts_menu = Toplevel()
         self.shortcuts_menu.title("Shortcuts")
-        self.shortcuts_menu.geometry("350x400")
+        self.shortcuts_menu.geometry("460x400")
         textbox = Text(self.shortcuts_menu)
         textbox.pack()
 
@@ -738,7 +769,9 @@ class MainWindow:
         load_clan       = "\tshift + c     : load clan file\n"
         load_block      = "\tshift + enter : load random block\n"
         load_prev_block = "\tshift + \     : load previous block\n"
-        output_labels   = "\tshift + o     : output classifications\n"
+        #output_labels   = "\tshift + o     : output classifications\n"
+        save_labels     = "\tcmd   + s     : save classifications  (Mac)\n"
+        save_labels_win = "\tctrl  + s     : save classifications  (Linux + Windows)\n"
 
         classification = "\nClassification Keys:\n\n"
         ids        = "\tc : CDS\n"
@@ -761,7 +794,8 @@ class MainWindow:
                                 load_clan+\
                                 load_block+\
                                 load_prev_block+\
-                                output_labels+\
+                                save_labels+\
+                                save_labels_win+\
                                 classification+\
                                 ids+\
                                 ads+
