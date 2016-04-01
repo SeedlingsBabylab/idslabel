@@ -677,11 +677,17 @@ class MainWindow:
 
         x_diff = datetime.timedelta(milliseconds=interval[1]-interval[0])
 
+        start = ""
         if interval[0] == 0:
             start = "0"+x_start.__str__()[:11]+".000"
         else:
+
             start = "0"+x_start.__str__()[:11]
+            if start[3] == ":":
+                start = start[1:]
         end = "0"+x_end.__str__()[:11]
+        if end[3] == ":":
+            end = end[1:]
 
         return [start, end, x_diff]
 
@@ -693,7 +699,7 @@ class MainWindow:
         with open(output_path, "wb") as output:
             writer = csv.writer(output)
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "multi-tier-parent"])
+                             "timestamp", "clip", "tier", "label", "multi-tier-parent", "dont_share"])
 
             for block in self.randomized_blocks:
                 dont_share = False
