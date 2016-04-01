@@ -1,7 +1,9 @@
 import pyaudio
 import wave
+import json
 import random
 import datetime
+import urllib2
 import time
 import csv
 import re
@@ -13,7 +15,8 @@ import tkFileDialog
 from tkMessageBox import showwarning
 
 
-version = "0.0.3"
+version = "v0.0.3"
+
 
 class Block:
     def __init__(self, index, clan_file):
@@ -67,7 +70,7 @@ class MainWindow:
         self.processed_clips = []
 
         self.root = master                # main GUI context
-        self.root.title("IDS Label  v"+version)      # title of window
+        self.root.title("IDS Label  "+version)      # title of window
         self.root.geometry("880x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
 
@@ -206,6 +209,7 @@ class MainWindow:
 
         self.clip_directory = ""
 
+
     def key_select(self, event):
         self.main_frame.focus_set()
 
@@ -289,6 +293,7 @@ class MainWindow:
         self.main_frame.focus_set()
 
     def load_clan(self):
+        self.check_github_for_latest_version()
         self.clan_file = tkFileDialog.askopenfilename()
 
         showwarning("Clips", "Please choose a folder to store audio clips")
@@ -827,12 +832,25 @@ class MainWindow:
         textbox.tag_config("title", font=("Georgia", "12", "bold"))
 
         name = "\n\n\n\nIDS Label\n"
-        version = "v{}\n\n".format(version)
+        version = "{}\n\n".format(version)
         author = "author: Andrei Amatuni\n"
         homepage = "homepage: https://github.com/SeedlingsBabylab/idslabel"
         textbox.insert('1.0', name+version+author+homepage)
 
         textbox.configure(state="disabled")
+
+
+    def check_github_for_latest_version(self):
+        resp = urllib2.urlopen("https://api.github.com/repos/SeedlingsBabylab/idslabel/tags")
+
+        json_response =  json.loads(resp.read())
+
+        if json_response[0]["name"] != version:
+            showwarning("Old Version", "This isn't the latest version of IDSLabel\nGet the latest release from: "
+                                       "\n\nhttps://github.com/SeedlingsBabylab/idslabel/releases")
+
+
+
 
 if __name__ == "__main__":
 
