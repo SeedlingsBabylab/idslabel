@@ -1,6 +1,6 @@
 # idslabel
 
-Note: This is nowhere near ready yet.
+Note: This is a work in progress. 
 
 ![IDSLabel](include/screenshot.png)
 
