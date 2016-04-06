@@ -1,6 +1,6 @@
 # idslabel
 
-Note: This is a work in progress. 
+Note: This is a work in progress.
 
 ![IDSLabel](include/screenshot.png)
 
@@ -10,7 +10,7 @@ Note: This is a work in progress.
 This application depends on FFmpeg, PortAudio and PyAudio.
 
 #### ffmpeg
-To install the ffmpeg binary, download from [here](https://www.ffmpeg.org/download.html). OS specific binaries are under the "Get the packages" section. The binary should be put somewhere on your $PATH, like /usr/local/bin (on Linux/OS X).
+To install the ffmpeg binary, download from [here](https://www.ffmpeg.org/download.html). OS specific binaries are under the "Get the packages" section. The binary should be put in the same directory as the idslabel.py file.
 
 #### portaudio
 To install PortAudio, the easiest way is to use your operating system's package manager.
@@ -62,7 +62,7 @@ There are keyboard shortcuts for selecting the classification and cycling throug
  - left          : previous clip
  - right         : next clip
  - space         : play clip
- - shift + space : play block
+ - shift + space : play whole block
 
 
 
@@ -72,7 +72,7 @@ Tiers which are composed of multiple lines, e.g. :
   &=vocalization 2662370_2663380
   0 . 2663380_2663480
 ```
-have a symbol associated with them to signify they're part of the unit ( " ^-- " , it's supposed to be an arrow pointinng to the parent tier)
+have a symbol associated with them to signify they're part of the unit ( " ^-- " , it's supposed to be an arrow pointing to the parent tier)
 
 In the classification output, if clips are associated together as part of a multi-line tier, the value in the "multi-tier"
 column will be the timestamp of the parent line that they're associated to. In the example provided above, the line with
@@ -98,6 +98,7 @@ the timestamp of 2662230_2662370 will be the parent to the following 2 lines.
  - multiple addressee
  - junk
 - export classifications to csv
+- check github if current IDSLabel is the latest version
 
 ### not implemented yet
 
