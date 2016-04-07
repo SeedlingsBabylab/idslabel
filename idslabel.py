@@ -71,7 +71,7 @@ class MainWindow:
 
         self.root = master                # main GUI context
         self.root.title("IDS Label  "+version)      # title of window
-        self.root.geometry("880x600")     # size of GUI window
+        self.root.geometry("1000x600")     # size of GUI window
         self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
 
         self.main_frame.bind("<Key>", self.key_select)
@@ -148,11 +148,11 @@ class MainWindow:
         self.load_audio_button.grid(row=0, column=1)
         self.load_rand_block_button.grid(row=0, column=2)
 
-        self.load_previous_block_button.grid(row=1, column=2)
-        self.play_clip_button.grid(row=2, column=2)
-        self.play_block_button.grid(row=3, column=2)
-        self.next_clip_button.grid(row=4, column=2)
-        self.output_classifications_button.grid(row=7, column=2)
+        self.load_previous_block_button.grid(row=1, column=2, rowspan=2)
+        self.play_block_button.grid(row=2, column=2, rowspan=2)
+        self.play_clip_button.grid(row=3, column=2, rowspan=2)
+        self.next_clip_button.grid(row=4, column=2, rowspan=2)
+        self.output_classifications_button.grid(row=7, column=2, rowspan=2)
 
         self.block_list = Listbox(self.main_frame, width=15, height=25)
         self.block_list.grid(row=1, column=3, rowspan=5)
@@ -209,6 +209,9 @@ class MainWindow:
 
         self.clip_directory = ""
 
+        self.loaded_classification_file = []
+
+        self.paths_text = None
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -293,7 +296,11 @@ class MainWindow:
         self.main_frame.focus_set()
 
     def load_clan(self):
-        self.check_github_for_latest_version()
+        try:
+            self.check_github_for_latest_version()
+        except Exception as e:
+            print e.message
+
         self.clan_file = tkFileDialog.askopenfilename()
 
         showwarning("Clips", "Please choose a folder to store audio clips")
@@ -301,27 +308,50 @@ class MainWindow:
 
         showwarning("Output", "Please create a classification output file")
         self.set_classification_output()
-        self.output_classifications()
+
+        if not os.path.isfile(self.classification_output):
+            self.output_classifications()
+        else:
+            self.load_classifications()
 
         showwarning("Note", "Remember to write your name in the 'CODER NAME' box before starting")
 
         self.parse_clan(self.clan_file)
 
+        # fill in all the old classification info into the clips/blocks in self.clip_blocks
+        if self.loaded_classification_file:
+            completed_classifications = []
+            for entry in self.loaded_classification_file:
+                if entry[0]:
+                    completed_classifications.append(entry)
 
+
+            for entry in completed_classifications:
+                self.find_clip_and_update(entry)
+
+        self.print_paths()
+
+    def find_clip_and_update(self, entry):
+        block = self.clip_blocks[int(entry[4])-1]
+        #block.
+        print "hello"
+
+    def load_classifications(self):
+        with open(self.classification_output, "rU") as input:
+            reader = csv.reader(input)
+            reader.next()
+            for row in reader:
+                self.loaded_classification_file.append(row)
 
     def load_audio(self):
         self.audio_file = tkFileDialog.askopenfilename()
 
     def play_clip(self):
-
         current_clip = self.block_list.curselection()
         clip_index = current_clip[0]
 
         clip_path = self.current_block.clips[clip_index].audio_path
         chunk = 1024
-
-        # self.block_list.selection_clear(0, END)
-        # self.block_list.selection_set(self.current_clip.clip_index)
 
         f = wave.open(clip_path,"rb")
 
@@ -404,11 +434,6 @@ class MainWindow:
         self.block_count_label.grid(row=7, column=3, columnspan=1)
 
         self.create_random_block_range()
-
-        # for block in self.randomized_blocks:
-        #     print "{}".format(block.index)
-        #
-        # self.output_classifications()
 
     def slice_block(self, block):
 
@@ -501,7 +526,6 @@ class MainWindow:
         parent_audio_path = os.path.split(self.audio_file)[1]
 
         block = Block(block_index, parent_path)
-
 
         for index, clip in enumerate(clips):
 
@@ -717,10 +741,8 @@ class MainWindow:
 
         return [start, end, x_diff]
 
-
     def set_clip_path(self):
         self.clip_directory = tkFileDialog.askdirectory()
-        print self.clip_directory
 
     def set_classification_output(self):
         self.classification_output = tkFileDialog.asksaveasfilename()
@@ -839,7 +861,6 @@ class MainWindow:
 
         textbox.configure(state="disabled")
 
-
     def check_github_for_latest_version(self):
         resp = urllib2.urlopen("https://api.github.com/repos/SeedlingsBabylab/idslabel/tags")
 
@@ -849,7 +870,20 @@ class MainWindow:
             showwarning("Old Version", "This isn't the latest version of IDSLabel\nGet the latest release from: "
                                        "\n\nhttps://github.com/SeedlingsBabylab/idslabel/releases")
 
+    def print_paths(self):
+        self.paths_text = Text(self.main_frame, width=65, pady=40)
+        self.paths_text.grid(row=8, column=0, columnspan=2)
 
+        audio_filepath =  "audio  file:        {}\n".format(os.path.split(self.audio_file)[1])
+        output_filepath = "output file:        {}\n".format(os.path.split(self.classification_output)[1])
+        clips_dir =       "clips  directory:   {}\n".format(self.clip_directory)
+
+        self.paths_text.insert("1.0",
+                               audio_filepath+\
+                               output_filepath+\
+                               clips_dir)
+
+        self.paths_text.configure(state="disabled")
 
 
 if __name__ == "__main__":
