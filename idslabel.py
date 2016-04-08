@@ -15,7 +15,7 @@ import tkFileDialog
 from tkMessageBox import showwarning
 
 
-version = "v0.0.4"
+version = "0.0.4"
 
 
 class Block:
@@ -70,7 +70,7 @@ class MainWindow:
         self.processed_clips = []
 
         self.root = master                          # main GUI context
-        self.root.title("IDS Label  "+version)      # title of window
+        self.root.title("IDS Label  v"+version)      # title of window
         self.root.geometry("1000x600")              # size of GUI window
         self.main_frame = Frame(root)               # main frame into which all the Gui components will be placed
 
@@ -695,16 +695,24 @@ class MainWindow:
         self.curr_clip_info.configure(state="normal")
         self.curr_clip_info.delete("1.0", END)
 
+        clip        = "clip:        {}\n".format(self.current_clip.clip_index)
+        block       = "block:       {}\n".format(self.current_clip.block_index)
+        tier        = "tier:        {}\n".format(self.current_clip.clip_tier)
+        label       = "label:       {}\n".format(self.current_clip.classification)
+        time        = "timestamp:   {}\n".format(self.current_clip.timestamp)
+        clip_length = "clip length: {}\n".format(self.current_clip.offset_time)
+        coder       = "coder:       {}\n".format(self.current_clip.coder)
+        clanfile    = "clan file:   {}\n".format(self.current_clip.clan_file)
+
         self.curr_clip_info.insert('1.0',
-                                   "clip:         {}\nblock:        {}\ntier:         {}\nlabel:        {}\ntime:         {}\nclip length:  {}\ncoder:        {}\nclan file:    {}".
-                                                            format(self.current_clip.clip_index,
-                                                                   self.current_clip.block_index,
-                                                                   self.current_clip.clip_tier,
-                                                                   self.current_clip.classification,
-                                                                   self.current_clip.timestamp,
-                                                                   self.current_clip.offset_time,
-                                                                   self.current_clip.coder,
-                                                                   self.current_clip.clan_file))
+                                    clip+\
+                                    block+\
+                                    tier+\
+                                    label+\
+                                    time+\
+                                    clip_length+\
+                                    coder+\
+                                    clanfile)
 
         self.curr_clip_info.configure(state="disabled")
 
@@ -900,7 +908,7 @@ class MainWindow:
         textbox.tag_config("title", font=("Georgia", "12", "bold"))
 
         name = "\n\n\n\nIDS Label\n"
-        version = "{}\n\n".format(version)
+        version = "v{}\n\n".format(version)
         author = "author: Andrei Amatuni\n"
         homepage = "homepage: https://github.com/SeedlingsBabylab/idslabel"
         textbox.insert('1.0', name+version+author+homepage)
@@ -912,8 +920,21 @@ class MainWindow:
 
         json_response =  json.loads(resp.read())
 
-        if json_response[0]["name"] != version:
-            showwarning("Old Version", "This isn't the latest version of IDSLabel\nGet the latest release from: "
+        git_version = json_response[0]["name"]
+        split_version = git_version[1:].split(".")
+
+        split_version = map(int, split_version)
+        int_this_version = map(int, version.split("."))
+
+        less = False
+        for index, num in enumerate(int_this_version):
+            if num < split_version[index]:
+                less = True
+                break
+
+        if less:
+            showwarning("Old Version",
+                        "This isn't the latest version of IDSLabel\nGet the latest release from: "
                                        "\n\nhttps://github.com/SeedlingsBabylab/idslabel/releases")
 
     def print_paths(self):
