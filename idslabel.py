@@ -71,7 +71,7 @@ class MainWindow:
 
         self.root = master                          # main GUI context
         self.root.title("IDS Label  v"+version)      # title of window
-        self.root.geometry("1000x600")              # size of GUI window
+        self.root.geometry("1000x610")              # size of GUI window
         self.main_frame = Frame(root)               # main frame into which all the Gui components will be placed
 
         self.main_frame.bind("<Key>", self.key_select)
@@ -161,15 +161,15 @@ class MainWindow:
         self.load_audio_button.grid(row=0, column=1)
         self.load_rand_block_button.grid(row=0, column=2)
 
-        self.load_previous_block_button.grid(row=1, column=2, rowspan=2)
-        self.play_block_button.grid(row=2, column=2, rowspan=2)
-        self.play_clip_button.grid(row=3, column=2, rowspan=2)
-        self.next_clip_button.grid(row=4, column=2, rowspan=2)
-        self.output_classifications_button.grid(row=7, column=2, rowspan=2)
+        #self.load_previous_block_button.grid(row=1, column=2)
+        self.play_block_button.grid(row=1, column=2)
+        self.play_clip_button.grid(row=2, column=2)
+        self.next_clip_button.grid(row=3, column=2)
+        self.output_classifications_button.grid(row=4, column=2)
         #self.load_classifications_button.grid(row=8, column=2, rowspan=2)
 
         self.block_list = Listbox(self.main_frame, width=15, height=25)
-        self.block_list.grid(row=1, column=3, rowspan=5)
+        self.block_list.grid(row=1, column=3, rowspan=24)
 
         self.block_list.bind('<<ListboxSelect>>', self.update_curr_clip)
         self.block_list.bind("<FocusIn>", self.reset_frame_focus)
@@ -177,7 +177,7 @@ class MainWindow:
 
 
         self.curr_clip_info = Text(self.main_frame, width=50, height=10)
-        self.curr_clip_info.grid(row=1, column=0, rowspan=3, columnspan=2)
+        self.curr_clip_info.grid(row=3, column=0, rowspan=8, columnspan=2)
 
 
         self.codername_entry = Entry(self.main_frame, width=15, font="-weight bold")
@@ -206,7 +206,7 @@ class MainWindow:
         self.block_condition_var = IntVar()
         self.block_condition_button = Checkbutton(self.main_frame, text="only load blocks with\nat least 1 FAN/MAN\ntier", variable=self.block_condition_var)
         self.block_condition_button.select()
-        self.block_condition_button.grid(row=1, column=4)
+        self.block_condition_button.grid(row=2, column=4)
 
         self.dont_share_var = IntVar()
         self.dont_share_button = Checkbutton(self.main_frame,
@@ -214,10 +214,20 @@ class MainWindow:
                                              variable=self.dont_share_var,
                                              command=self.set_curr_block_dontshare)
 
-        self.dont_share_button.grid(row=2, column=4)
+        self.dont_share_button.grid(row=3, column=4)
 
         self.loaded_block_history = []
         self.on_first_block = False
+
+        self.previous_block_label = Label(self.main_frame, text="Load Previous Block:")
+        self.previous_block_label.grid(row=4, column=4)
+
+        self.previous_block_var = IntVar(self.main_frame)
+        self.previous_block_menu = OptionMenu(self.main_frame,
+                                              self.previous_block_var,
+                                              tuple(self.loaded_block_history))
+
+        self.previous_block_menu.grid(row=5, column=4)
 
         self.classification_output = ""
 
@@ -468,7 +478,7 @@ class MainWindow:
                                        text=str(len(conversation_blocks))+\
                                        " blocks")
 
-        self.block_count_label.grid(row=7, column=3, columnspan=1)
+        self.block_count_label.grid(row=27, column=3, columnspan=1)
 
         self.create_random_block_range()
 
@@ -631,7 +641,7 @@ class MainWindow:
                 self.block_list.insert(index, element.clip_tier)
 
         self.coded_block_label = Label(self.main_frame, text="coded block #{}".format(self.current_block_index + 1))
-        self.coded_block_label.grid(row=6, column=3)
+        self.coded_block_label.grid(row=26, column=3)
 
         self.current_clip = self.current_block.clips[0]
 
@@ -664,6 +674,8 @@ class MainWindow:
         if self.current_block_index not in self.loaded_block_history:
             self.loaded_block_history.append(self.current_block_index)
 
+        self.sort_and_prune_block_history()
+
         self.slice_block(self.current_block)
 
         for index, element in enumerate(self.randomized_blocks[self.current_block_index].clips):
@@ -673,7 +685,7 @@ class MainWindow:
                 self.block_list.insert(index, element.clip_tier)
 
         self.coded_block_label = Label(self.main_frame, text="coded block #{}".format(self.current_block_index + 1))
-        self.coded_block_label.grid(row=6, column=3)
+        self.coded_block_label.grid(row=26, column=3)
 
         self.current_clip = self.current_block.clips[0]
 
@@ -681,6 +693,14 @@ class MainWindow:
         self.block_list.selection_set(0)
 
         self.update_curr_clip_info()
+
+    def sort_and_prune_block_history(self):
+        self.loaded_block_history = list(set(self.loaded_block_history))
+        self.loaded_block_history.sort()
+
+        self.previous_block_menu = apply(OptionMenu, (self.main_frame, self.previous_block_var) + tuple(self.loaded_block_history))
+        self.previous_block_menu.grid(row=5, column=4)
+
 
     def move_currblock_forward(self):
         if self.current_block_index is None:
@@ -705,8 +725,8 @@ class MainWindow:
         clanfile    = "clan file:   {}\n".format(self.current_clip.clan_file)
 
         self.curr_clip_info.insert('1.0',
-                                    clip+\
                                     block+\
+                                    clip+\
                                     tier+\
                                     label+\
                                     time+\
@@ -939,7 +959,7 @@ class MainWindow:
 
     def print_paths(self):
         self.paths_text = Text(self.main_frame, width=65, pady=40)
-        self.paths_text.grid(row=8, column=0, columnspan=2)
+        self.paths_text.grid(row=28, column=0, rowspan=4, columnspan=2)
 
         if not self.audio_file:
             audiofile = None
