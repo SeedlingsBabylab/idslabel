@@ -69,10 +69,10 @@ class MainWindow:
         self.processed_clips_in_curr_block = []
         self.processed_clips = []
 
-        self.root = master                # main GUI context
+        self.root = master                          # main GUI context
         self.root.title("IDS Label  "+version)      # title of window
-        self.root.geometry("1000x600")     # size of GUI window
-        self.main_frame = Frame(root)     # main frame into which all the Gui components will be placed
+        self.root.geometry("1000x600")              # size of GUI window
+        self.main_frame = Frame(root)               # main frame into which all the Gui components will be placed
 
         self.main_frame.bind("<Key>", self.key_select)
         self.main_frame.bind("<space>", self.shortcut_play_clip)
@@ -85,10 +85,13 @@ class MainWindow:
 
         if sys.platform == "darwin":
             self.main_frame.bind("<Command-s>", self.save_classifications)
+            self.main_frame.bind("<Command-l>", self.reload_classifications)
         if sys.platform == "linux2":
             self.main_frame.bind("<Control-s>", self.save_classifications)
+            self.main_frame.bind("<Control-l>", self.reload_classifications)
         if sys.platform == "win32":
             self.main_frame.bind("<Control-s>", self.save_classifications)
+            self.main_frame.bind("<Control-l>", self.reload_classifications)
 
         self.menubar = Menu(self.root)
 
@@ -96,6 +99,7 @@ class MainWindow:
         self.filemenu.add_command(label="Load Audio", command=self.load_audio)
         self.filemenu.add_command(label="Load Clan", command=self.load_clan)
         self.filemenu.add_command(label="Save Classifications", command=self.output_classifications)
+        self.filemenu.add_command(label="Load Saved Classifications", command=self.load_classifications)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
@@ -144,6 +148,11 @@ class MainWindow:
                                                     text="Save Classifications",
                                                     command=self.output_classifications)
 
+        self.load_classifications_button = Button(self.main_frame,
+                                                  text="Load Classifications",
+                                                  command=self.load_classifications)
+
+
         self.load_clan_button.grid(row=0, column=0)
         self.load_audio_button.grid(row=0, column=1)
         self.load_rand_block_button.grid(row=0, column=2)
@@ -153,6 +162,7 @@ class MainWindow:
         self.play_clip_button.grid(row=3, column=2, rowspan=2)
         self.next_clip_button.grid(row=4, column=2, rowspan=2)
         self.output_classifications_button.grid(row=7, column=2, rowspan=2)
+        #self.load_classifications_button.grid(row=8, column=2, rowspan=2)
 
         self.block_list = Listbox(self.main_frame, width=15, height=25)
         self.block_list.grid(row=1, column=3, rowspan=5)
@@ -209,9 +219,13 @@ class MainWindow:
 
         self.clip_directory = ""
 
+        self.old_classifications_file = ""
+
         self.loaded_classification_file = []
 
         self.paths_text = None
+
+        self.reload_multiline_parents = []
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -311,14 +325,45 @@ class MainWindow:
 
         if not os.path.isfile(self.classification_output):
             self.output_classifications()
-        else:
-            self.load_classifications()
+        # else:
+        #     self.load_classifications()
 
         showwarning("Note", "Remember to write your name in the 'CODER NAME' box before starting")
 
         self.parse_clan(self.clan_file)
 
-        # fill in all the old classification info into the clips/blocks in self.clip_blocks
+        self.print_paths()
+
+    def find_clip_and_update(self, entry):
+        block_index = int(entry[4])-1
+        block = self.clip_blocks[block_index]
+        clip_index = int(entry[6]) - 1
+        block.clips[clip_index].label_date = entry[0]
+        block.clips[clip_index].coder = entry[1]
+        block.clips[clip_index].classification = entry[8]
+
+        if entry[9] != "N":
+            block.clips[clip_index].multiline = True
+            block.clips[clip_index].multi_tier_parent = entry[9]
+
+
+    def reload_classifications(self, event):
+        self.load_classifications()
+
+    def load_classifications(self):
+
+        if not self.clip_blocks:
+            showwarning("Reload", "You need to load audio and cha file before reloading saved classifications")
+            return
+        self.old_classifications_file = tkFileDialog.askopenfilename()
+
+        with open(self.old_classifications_file, "rU") as input:
+            reader = csv.reader(input)
+            reader.next()
+            for row in reader:
+                self.loaded_classification_file.append(row)
+
+
         if self.loaded_classification_file:
             completed_classifications = []
             for entry in self.loaded_classification_file:
@@ -328,20 +373,6 @@ class MainWindow:
 
             for entry in completed_classifications:
                 self.find_clip_and_update(entry)
-
-        self.print_paths()
-
-    def find_clip_and_update(self, entry):
-        block = self.clip_blocks[int(entry[4])-1]
-        #block.
-        print "hello"
-
-    def load_classifications(self):
-        with open(self.classification_output, "rU") as input:
-            reader = csv.reader(input)
-            reader.next()
-            for row in reader:
-                self.loaded_classification_file.append(row)
 
     def load_audio(self):
         self.audio_file = tkFileDialog.askopenfilename()
@@ -753,6 +784,8 @@ class MainWindow:
     def output_classifications(self):
 
         #[date, coder, clanfile, audiofile, block, timestamp, clip, tier, label, multi-tier]
+        if not self.classification_output:
+            self.classification_output = tkFileDialog.asksaveasfilename()
 
         with open(self.classification_output, "wb") as output:
             writer = csv.writer(output)
