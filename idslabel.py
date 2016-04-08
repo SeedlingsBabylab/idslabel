@@ -15,7 +15,7 @@ import tkFileDialog
 from tkMessageBox import showwarning
 
 
-version = "v0.0.3"
+version = "v0.0.4"
 
 
 class Block:
@@ -85,12 +85,15 @@ class MainWindow:
 
         if sys.platform == "darwin":
             self.main_frame.bind("<Command-s>", self.save_classifications)
+            self.main_frame.bind("<Command-S>", self.save_as_classifications)
             self.main_frame.bind("<Command-l>", self.reload_classifications)
         if sys.platform == "linux2":
             self.main_frame.bind("<Control-s>", self.save_classifications)
+            self.main_frame.bind("<Control-S>", self.save_as_classifications)
             self.main_frame.bind("<Control-l>", self.reload_classifications)
         if sys.platform == "win32":
             self.main_frame.bind("<Control-s>", self.save_classifications)
+            self.main_frame.bind("<Control-S>", self.save_as_classifications)
             self.main_frame.bind("<Control-l>", self.reload_classifications)
 
         self.menubar = Menu(self.root)
@@ -99,6 +102,7 @@ class MainWindow:
         self.filemenu.add_command(label="Load Audio", command=self.load_audio)
         self.filemenu.add_command(label="Load Clan", command=self.load_clan)
         self.filemenu.add_command(label="Save Classifications", command=self.output_classifications)
+        self.filemenu.add_command(label="Save As Classifications", command=self.set_classification_output)
         self.filemenu.add_command(label="Load Saved Classifications", command=self.load_classifications)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
@@ -227,6 +231,8 @@ class MainWindow:
 
         self.reload_multiline_parents = []
 
+        self.show_shortcuts()
+
     def key_select(self, event):
         self.main_frame.focus_set()
 
@@ -320,17 +326,16 @@ class MainWindow:
         showwarning("Clips", "Please choose a folder to store audio clips")
         self.set_clip_path()
 
-        showwarning("Output", "Please create a classification output file")
-        self.set_classification_output()
-
-        if not os.path.isfile(self.classification_output):
-            self.output_classifications()
-        # else:
-        #     self.load_classifications()
+        if not self.classification_output:
+            showwarning("Output", "Please create a classification output file")
+            self.set_classification_output()
 
         showwarning("Note", "Remember to write your name in the 'CODER NAME' box before starting")
 
         self.parse_clan(self.clan_file)
+
+        if not os.path.isfile(self.classification_output):
+            self.output_classifications()
 
         self.print_paths()
 
@@ -376,6 +381,7 @@ class MainWindow:
 
     def load_audio(self):
         self.audio_file = tkFileDialog.askopenfilename()
+        self.print_paths()
 
     def play_clip(self):
         current_clip = self.block_list.curselection()
@@ -775,8 +781,12 @@ class MainWindow:
     def set_clip_path(self):
         self.clip_directory = tkFileDialog.askdirectory()
 
+    def save_as_classifications(self, event):
+        self.set_classification_output()
+
     def set_classification_output(self):
         self.classification_output = tkFileDialog.asksaveasfilename()
+        self.print_paths()
 
     def save_classifications(self, event):
         self.output_classifications()
@@ -819,19 +829,20 @@ class MainWindow:
     def show_shortcuts(self):
         self.shortcuts_menu = Toplevel()
         self.shortcuts_menu.title("Shortcuts")
-        self.shortcuts_menu.geometry("460x400")
+        self.shortcuts_menu.geometry("530x400")
         textbox = Text(self.shortcuts_menu)
         textbox.pack()
 
 
         general = "General Keys:\n\n"
-        load_audio      = "\tshift + a     : load audio file\n"
-        load_clan       = "\tshift + c     : load clan file\n"
-        load_block      = "\tshift + enter : load random block\n"
-        load_prev_block = "\tshift + \     : load previous block\n"
-        #output_labels   = "\tshift + o     : output classifications\n"
-        save_labels     = "\tcmd   + s     : save classifications  (Mac)\n"
-        save_labels_win = "\tctrl  + s     : save classifications  (Linux + Windows)\n"
+        load_audio      = "\tshift + a             : load audio file\n"
+        load_clan       = "\tshift + c             : load clan file\n"
+        load_block      = "\tshift + enter         : load random block\n"
+        load_prev_block = "\tshift + \             : load previous block\n"
+        save_labels     = "\tcmd   + s             : save classifications     (Mac)\n"
+        save_labels_win = "\tctrl  + s             : save classifications     (Linux/Windows)\n"
+        save_as         = "\tcmd   + shift + s     : save as classifications  (Mac)\n"
+        save_as_win     = "\tctrl  + shift + s     : save classifications     (Linux/Windows)\n"
 
         classification = "\nClassification Keys:\n\n"
         ids        = "\tc : CDS\n"
@@ -856,6 +867,8 @@ class MainWindow:
                                 load_prev_block+\
                                 save_labels+\
                                 save_labels_win+\
+                                save_as+\
+                                save_as_win+\
                                 classification+\
                                 ids+\
                                 ads+
@@ -907,9 +920,32 @@ class MainWindow:
         self.paths_text = Text(self.main_frame, width=65, pady=40)
         self.paths_text.grid(row=8, column=0, columnspan=2)
 
-        audio_filepath =  "audio  file:        {}\n".format(os.path.split(self.audio_file)[1])
-        output_filepath = "output file:        {}\n".format(os.path.split(self.classification_output)[1])
-        clips_dir =       "clips  directory:   {}\n".format(self.clip_directory)
+        if not self.audio_file:
+            audiofile = None
+        else:
+            audiofile = os.path.split(self.audio_file)[1]
+
+        if not self.classification_output:
+            outputfile = None
+        else:
+            outputfile = os.path.split(self.classification_output)[1]
+
+        clipsdir = self.clip_directory
+
+        if audiofile:
+            audio_filepath =  "audio  file:        {}\n".format(audiofile)
+        else:
+            audio_filepath =  "audio  file:        {}\n".format("N/A")
+
+        if outputfile:
+            output_filepath = "output file:        {}\n".format(outputfile)
+        else:
+            output_filepath = "output file:        {}\n".format("N/A")
+
+        if clipsdir:
+            clips_dir =       "clips  directory:   {}\n".format(clipsdir)
+        else:
+            clips_dir =       "clips  directory:   {}\n".format("N/A")
 
         self.paths_text.insert("1.0",
                                audio_filepath+\
