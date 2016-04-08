@@ -41,12 +41,14 @@ You need to "Load Audio" before "Load Clan". Then, "Load Block", select the clip
 There are keyboard shortcuts for selecting the classification and cycling through the clips:
 
 - General Keys
- - shift + a : load audio file
- - shift + c : load clan file
- - shift + enter : load random block
- - shift + \ : load previous block
- - cmd   + s : save classifications (Mac)
- - ctrl  + s : save classifications (Linux & Windows)
+ - shift + a         : load audio file
+ - shift + c         : load clan file
+ - shift + enter     : load random block
+ - shift + \         : load previous block
+ - cmd   + s         : save classifications (Mac)
+ - ctrl  + s         : save classifications (Linux/Windows)
+ - cmd   + shift + s : save as classification (Mac)
+ - ctrl  + shift + s : save as classification (Linux/Windows)
 
 - Classification Keys
  - c : CDS
