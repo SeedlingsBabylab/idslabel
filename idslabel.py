@@ -10,6 +10,8 @@ import re
 import os
 import subprocess as sp
 
+from operator import itemgetter
+
 from Tkinter import *
 import tkFileDialog
 from tkMessageBox import showwarning
@@ -181,8 +183,9 @@ class MainWindow:
 
 
         self.codername_entry = Entry(self.main_frame, width=15, font="-weight bold")
-        self.codername_entry.insert(END, "CODER NAME")
+        self.codername_entry.insert(END, "CODER_NAME")
         self.codername_entry.grid(row=0, column=4)
+        self.codername_entry.bind("<Return>", self.reset_frame_focus)
 
         self.classification_conflict_label = None
 
@@ -222,10 +225,11 @@ class MainWindow:
         self.previous_block_label = Label(self.main_frame, text="Load Previous Block:")
         self.previous_block_label.grid(row=4, column=4)
 
-        self.previous_block_var = IntVar(self.main_frame)
-        self.previous_block_menu = OptionMenu(self.main_frame,
-                                              self.previous_block_var,
-                                              tuple(self.loaded_block_history))
+        self.previous_block_menu = Listbox(self.main_frame, width=14, height=10)
+
+        self.previous_block_menu.bind("<Double-Button-1>", self.load_previous_block2)
+
+        self.previous_block_menu.bind("<FocusIn>", self.reset_frame_focus)
 
         self.previous_block_menu.grid(row=5, column=4)
 
@@ -238,10 +242,14 @@ class MainWindow:
         self.loaded_classification_file = []
 
         self.paths_text = None
+        self.print_paths()
 
         self.reload_multiline_parents = []
 
         self.show_shortcuts()
+
+        self.last_tried_block = 0
+
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -251,6 +259,9 @@ class MainWindow:
         if selected_key == "c":
             if not self.current_clip:
                 self.set_curr_clip(0)
+            if self.codername_entry.get() == "CODER_NAME":
+                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
+                return
             self.current_clip.classification = "CDS"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
@@ -259,6 +270,9 @@ class MainWindow:
         if selected_key == "a":
             if not self.current_clip:
                 self.set_curr_clip(0)
+            if self.codername_entry.get() == "CODER_NAME":
+                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
+                return
             self.current_clip.classification = "ADS"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
@@ -266,6 +280,9 @@ class MainWindow:
         if selected_key == "n":
             if not self.current_clip:
                 self.set_curr_clip(0)
+            if self.codername_entry.get() == "CODER_NAME":
+                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
+                return
             self.current_clip.classification = "CHILD_NOISE"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
@@ -274,6 +291,9 @@ class MainWindow:
         if selected_key == "j":
             if not self.current_clip:
                 self.set_curr_clip(0)
+            if self.codername_entry.get() == "CODER_NAME":
+                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
+                return
             self.current_clip.classification = "JUNK"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
@@ -282,6 +302,9 @@ class MainWindow:
         if selected_key == "r":
             if not self.current_clip:
                 self.set_curr_clip(0)
+            if self.codername_entry.get() == "CODER_NAME":
+                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
+                return
             self.current_clip.classification = "REGISTER_SWITCH"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
@@ -290,6 +313,9 @@ class MainWindow:
         if selected_key == "m":
             if not self.current_clip:
                 self.set_curr_clip(0)
+            if self.codername_entry.get() == "CODER_NAME":
+                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
+                return
             self.current_clip.classification = "MULTIPLE_ADDR"
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
@@ -335,12 +361,13 @@ class MainWindow:
 
         showwarning("Clips", "Please choose a folder to store audio clips")
         self.set_clip_path()
-
+        self.print_paths()
         if not self.classification_output:
             showwarning("Output", "Please create a classification output file")
             self.set_classification_output()
+            self.print_paths()
 
-        showwarning("Note", "Remember to write your name in the 'CODER NAME' box before starting")
+        showwarning("Note", "Remember to write your name in the 'CODER_NAME' box before starting")
 
         self.parse_clan(self.clan_file)
 
@@ -615,6 +642,12 @@ class MainWindow:
 
         return block
 
+    def load_previous_block2(self, event):
+        selected_block = self.previous_block_menu.curselection()
+        randomized_index = int(self.previous_block_menu.get(selected_block[0])[1:6].strip())
+        #print self.previous_block_menu.get(selected_block[0])[1:6].strip()
+        self.load_block(randomized_index)
+
     def load_previous_block(self):
 
         if self.current_block_index is None:
@@ -651,6 +684,7 @@ class MainWindow:
         self.update_curr_clip_info()
 
     def load_random_conv_block(self):
+
         if not self.current_block:
             self.current_block_index = 0
             self.current_block = self.randomized_blocks[0]
@@ -672,13 +706,13 @@ class MainWindow:
         self.block_list.delete(0, END)
 
         if self.current_block_index not in self.loaded_block_history:
-            self.loaded_block_history.append(self.current_block_index)
+            self.loaded_block_history.append((self.current_block_index, self.current_block.index))
 
         self.sort_and_prune_block_history()
 
         self.slice_block(self.current_block)
 
-        for index, element in enumerate(self.randomized_blocks[self.current_block_index].clips):
+        for index, element in enumerate(self.current_block.clips):
             if element.multiline:
                 self.block_list.insert(index, element.clip_tier+" ^--")
             else:
@@ -696,11 +730,35 @@ class MainWindow:
 
     def sort_and_prune_block_history(self):
         self.loaded_block_history = list(set(self.loaded_block_history))
-        self.loaded_block_history.sort()
+        self.loaded_block_history = sorted(self.loaded_block_history, key=itemgetter(0))
 
-        self.previous_block_menu = apply(OptionMenu, (self.main_frame, self.previous_block_var) + tuple(self.loaded_block_history))
-        self.previous_block_menu.grid(row=5, column=4)
+        self.previous_block_menu.delete(0, END)
+        for index, element in enumerate(self.loaded_block_history):
+            self.previous_block_menu.insert(index, "#{:>5}:   block {:>6}".format(element[0]+1, element[1]))
 
+        self.previous_block_menu.see(self.previous_block_menu.size()-1)
+
+    def load_block(self, randomized_index):
+        self.current_block = self.randomized_blocks[randomized_index-1]
+        self.current_block_index = randomized_index
+
+        self.block_list.delete(0, END)
+
+        for index, element in enumerate(self.current_block.clips):
+            if element.multiline:
+                self.block_list.insert(index, element.clip_tier + " ^--")
+            else:
+                self.block_list.insert(index, element.clip_tier)
+
+        self.coded_block_label = Label(self.main_frame, text="coded block #{}".format(self.current_block_index + 1))
+        self.coded_block_label.grid(row=26, column=3)
+
+        self.current_clip = self.current_block.clips[0]
+
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(0)
+
+        self.update_curr_clip_info()
 
     def move_currblock_forward(self):
         if self.current_block_index is None:
@@ -708,15 +766,17 @@ class MainWindow:
         elif self.current_block_index == len(self.randomized_blocks):
             print "That's the last block"
         else:
-            self.current_block_index += 1
+            self.current_block_index = self.last_tried_block + 1
+            self.last_tried_block += 1
+            self.current_block = self.randomized_blocks[self.current_block_index]
 
     def update_curr_clip_info(self):
 
         self.curr_clip_info.configure(state="normal")
         self.curr_clip_info.delete("1.0", END)
 
-        clip        = "clip:        {}\n".format(self.current_clip.clip_index)
         block       = "block:       {}\n".format(self.current_clip.block_index)
+        clip        = "clip:        {}\n".format(self.current_clip.clip_index)
         tier        = "tier:        {}\n".format(self.current_clip.clip_tier)
         label       = "label:       {}\n".format(self.current_clip.classification)
         time        = "timestamp:   {}\n".format(self.current_clip.timestamp)
