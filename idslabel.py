@@ -250,73 +250,27 @@ class MainWindow:
 
         self.last_tried_block = 0
 
+        self.key_label_map = {  "a": "ADS",
+                                "c": "CDS",
+                                "j": "JUNK",
+                                "m": "MULTIPLE_ADDR",
+                                "n": "CHILD_NOISE",
+                                "r": "REGISTER_SWITCH"
+                              }
+
 
     def key_select(self, event):
         self.main_frame.focus_set()
 
         selected_key = event.char
 
-        if selected_key == "c":
+        if selected_key in self.key_label_map:
             if not self.current_clip:
                 self.set_curr_clip(0)
             if self.codername_entry.get() == "CODER_NAME":
                 showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
                 return
-            self.current_clip.classification = "CDS"
-            self.current_clip.label_date = time.strftime("%m/%d/%Y")
-            self.current_clip.coder = self.codername_entry.get()
-            self.update_curr_clip_info()
-
-        if selected_key == "a":
-            if not self.current_clip:
-                self.set_curr_clip(0)
-            if self.codername_entry.get() == "CODER_NAME":
-                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
-                return
-            self.current_clip.classification = "ADS"
-            self.current_clip.label_date = time.strftime("%m/%d/%Y")
-            self.current_clip.coder = self.codername_entry.get()
-            self.update_curr_clip_info()
-        if selected_key == "n":
-            if not self.current_clip:
-                self.set_curr_clip(0)
-            if self.codername_entry.get() == "CODER_NAME":
-                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
-                return
-            self.current_clip.classification = "CHILD_NOISE"
-            self.current_clip.label_date = time.strftime("%m/%d/%Y")
-            self.current_clip.coder = self.codername_entry.get()
-            self.update_curr_clip_info()
-
-        if selected_key == "j":
-            if not self.current_clip:
-                self.set_curr_clip(0)
-            if self.codername_entry.get() == "CODER_NAME":
-                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
-                return
-            self.current_clip.classification = "JUNK"
-            self.current_clip.label_date = time.strftime("%m/%d/%Y")
-            self.current_clip.coder = self.codername_entry.get()
-            self.update_curr_clip_info()
-
-        if selected_key == "r":
-            if not self.current_clip:
-                self.set_curr_clip(0)
-            if self.codername_entry.get() == "CODER_NAME":
-                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
-                return
-            self.current_clip.classification = "REGISTER_SWITCH"
-            self.current_clip.label_date = time.strftime("%m/%d/%Y")
-            self.current_clip.coder = self.codername_entry.get()
-            self.update_curr_clip_info()
-
-        if selected_key == "m":
-            if not self.current_clip:
-                self.set_curr_clip(0)
-            if self.codername_entry.get() == "CODER_NAME":
-                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
-                return
-            self.current_clip.classification = "MULTIPLE_ADDR"
+            self.current_clip.classification = self.key_label_map[selected_key]
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
             self.update_curr_clip_info()
