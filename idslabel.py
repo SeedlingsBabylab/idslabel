@@ -363,7 +363,7 @@ class MainWindow:
         self.set_clip_path()
         self.print_paths()
         if not self.classification_output:
-            showwarning("Output", "Please create a classification output file")
+            showwarning("Output", "Please create a classification output file (.csv)")
             self.set_classification_output()
             self.print_paths()
 
