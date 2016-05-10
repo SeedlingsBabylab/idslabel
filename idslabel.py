@@ -8,6 +8,8 @@ import time
 import csv
 import re
 import os
+import requests
+import cgi
 import subprocess as sp
 
 from operator import itemgetter
@@ -19,6 +21,9 @@ from tkMessageBox import showwarning
 
 version = "0.0.4"
 
+
+server_url = "http://localhost:8080/getblock/"
+lab_info_url = "http://localhost:8080/labinfo/"
 
 class Block:
     def __init__(self, index, clan_file):
@@ -106,6 +111,8 @@ class MainWindow:
         self.filemenu.add_command(label="Save Classifications", command=self.output_classifications)
         self.filemenu.add_command(label="Save As Classifications", command=self.set_classification_output)
         self.filemenu.add_command(label="Load Saved Classifications", command=self.load_classifications)
+        self.filemenu.add_command(label="Set Block Path", command=self.set_clip_path)
+        self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
@@ -158,16 +165,19 @@ class MainWindow:
                                                   text="Load Classifications",
                                                   command=self.load_classifications)
 
+        self.get_blocks_button = Button(self.main_frame,
+                                        text="Get Blocks",
+                                        command=self.get_blocks)
 
         self.load_clan_button.grid(row=0, column=0)
         self.load_audio_button.grid(row=0, column=1)
-        self.load_rand_block_button.grid(row=0, column=2)
+        self.get_blocks_button.grid(row=0, column=2)
 
-        #self.load_previous_block_button.grid(row=1, column=2)
-        self.play_block_button.grid(row=1, column=2)
-        self.play_clip_button.grid(row=2, column=2)
-        self.next_clip_button.grid(row=3, column=2)
-        self.output_classifications_button.grid(row=4, column=2)
+        self.load_rand_block_button.grid(row=1, column=2)
+        self.play_block_button.grid(row=2, column=2)
+        self.play_clip_button.grid(row=3, column=2)
+        self.next_clip_button.grid(row=4, column=2)
+        self.output_classifications_button.grid(row=5, column=2)
         #self.load_classifications_button.grid(row=8, column=2, rowspan=2)
 
         self.block_list = Listbox(self.main_frame, width=15, height=25)
@@ -257,6 +267,8 @@ class MainWindow:
                                 "n": "CHILD_NOISE",
                                 "r": "REGISTER_SWITCH"
                               }
+
+        self.num_blocks_to_get = 1
 
 
     def key_select(self, event):
@@ -1010,6 +1022,49 @@ class MainWindow:
         self.paths_text.configure(state="disabled")
 
 
+    def get_blocks(self):
+        for i in range(self.num_blocks_to_get):
+            self.get_block()
+
+    def get_block(self):
+        payload = {}
+        payload["lab-key"] = "123456789"
+        payload["username"] = self.codername_entry.get()
+
+        resp = requests.post(server_url, json=payload, stream=True, allow_redirects=False)
+
+
+        params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
+        filename = params[1]['filename']
+        output_path = os.path.join(self.clip_directory, filename)
+        if resp.ok:
+            with open(output_path, "wb") as output:
+                output.write(resp.content)
+
+
+
+    def get_lab_info(self):
+        self.lab_info_page = Toplevel()
+        self.lab_info_page.title("Lab Info")
+        self.lab_info_page.geometry("450x400")
+        #textbox = Text(self.lab_info_page, width=55, height=30)
+        #textbox.pack()
+
+        user_box = Listbox(self.lab_info_page, width=15, height=20)
+        user_box.grid(row=0, column=0)
+        payload = {"lab-key": "1234567654321"}
+
+        resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
+
+        if resp.ok:
+            user_data = json.loads(resp.content)
+            print user_data
+
+            i = 0
+            for key, value in user_data['users'].iteritems():
+                user_box.insert(i, value['name'])
+                i+=1
+        print
 if __name__ == "__main__":
 
     root = Tk()
