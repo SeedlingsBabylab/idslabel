@@ -24,6 +24,8 @@ version = "0.0.4"
 
 server_url = "http://localhost:8080/getblock/"
 lab_info_url = "http://localhost:8080/labinfo/"
+all_lab_info_url = "http://localhost:8080/alllabinfo/"
+
 
 class Block:
     def __init__(self, index, clan_file):
@@ -113,6 +115,7 @@ class MainWindow:
         self.filemenu.add_command(label="Load Saved Classifications", command=self.load_classifications)
         self.filemenu.add_command(label="Set Block Path", command=self.set_clip_path)
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
+        self.filemenu.add_command(label="Get All Lab Info", command=self.get_all_lab_info)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
@@ -270,6 +273,20 @@ class MainWindow:
 
         self.num_blocks_to_get = 1
 
+        self.lab_info_page = None
+        self.lab_info_user_box = None
+        self.curr_user = None
+        self.lab_data = None
+        self.lab_users = []
+
+
+        self.all_lab_info_page = None
+        self.all_lab_info_lab_box = None
+        self.all_lab_info_user_box = None
+        self.all_lab_data = None
+        self.curr_lab = None
+
+
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -353,7 +370,6 @@ class MainWindow:
         if entry[9] != "N":
             block.clips[clip_index].multiline = True
             block.clips[clip_index].multi_tier_parent = entry[9]
-
 
     def reload_classifications(self, event):
         self.load_classifications()
@@ -1021,7 +1037,6 @@ class MainWindow:
 
         self.paths_text.configure(state="disabled")
 
-
     def get_blocks(self):
         for i in range(self.num_blocks_to_get):
             self.get_block()
@@ -1047,24 +1062,100 @@ class MainWindow:
         self.lab_info_page = Toplevel()
         self.lab_info_page.title("Lab Info")
         self.lab_info_page.geometry("450x400")
-        #textbox = Text(self.lab_info_page, width=55, height=30)
-        #textbox.pack()
 
-        user_box = Listbox(self.lab_info_page, width=15, height=20)
-        user_box.grid(row=0, column=0)
+        users_label = Label(self.all_lab_info_page, text="Users")
+        users_label.grid(row=0, column=0)
+
+        work_item_label = Label(self.all_lab_info_page, text="Work Items")
+        work_item_label.grid(row=0, column=1)
+
+        self.lab_info_user_box = Listbox(self.lab_info_page, width=15, height=20)
+        self.lab_info_user_box.grid(row=1, column=0)
+        self.all_lab_info_lab_box.bind('<<ListboxSelect>>', self.update_curr_user)
+
+        self.lab_info_user_work_box = Listbox(self.lab_info_page, width=15, height=20)
+        self.lab_info_user_work_box.grid(row=1, column=1)
+
+        self.lab_info_user_past_work_box = Listbox(self.lab_info_page, width=15, height=20)
+        self.lab_info_user_past_work_box.grid(row=1, column=2)
+
         payload = {"lab-key": "1234567654321"}
 
         resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
 
         if resp.ok:
-            user_data = json.loads(resp.content)
-            print user_data
+            self.lab_data = json.loads(resp.content)
+            print self.lab_data
 
             i = 0
-            for key, value in user_data['users'].iteritems():
-                user_box.insert(i, value['name'])
+            for key, value in self.lab_data['users'].iteritems():
+                self.lab_info_user_box.insert(i, value['name'])
+                self.lab_users.append(value["name"])
                 i+=1
         print
+
+
+    def get_all_lab_info(self):
+        self.all_lab_info_page = Toplevel()
+        self.all_lab_info_page.title("All Lab Info")
+        self.all_lab_info_page.geometry("450x400")
+
+        labs_label = Label(self.all_lab_info_page, text="Labs")
+        labs_label.grid(row=0, column=0)
+
+        users_label = Label(self.all_lab_info_page, text="Users")
+        users_label.grid(row=0, column=1)
+
+        self.all_lab_info_lab_box = Listbox(self.all_lab_info_page, width=15, height=20)
+        self.all_lab_info_lab_box.grid(row=1, column=0)
+        self.all_lab_info_lab_box.bind('<<ListboxSelect>>', self.update_curr_lab)
+
+        self.all_lab_info_user_box = Listbox(self.all_lab_info_page, width=15, height=20)
+        self.all_lab_info_user_box.grid(row=1, column=1)
+
+        payload = {"lab-key": "1234567654321"}
+
+        resp = requests.post(all_lab_info_url, json=payload, allow_redirects=False)
+
+        if resp.ok:
+            self.all_lab_data = json.loads(resp.content)
+            print self.all_lab_data
+
+            for index, lab in enumerate(self.all_lab_data):
+                self.all_lab_info_lab_box.insert(index, lab['key'])
+
+        print
+
+
+    def update_curr_lab(self, evt):
+        box = evt.widget
+        index = int(box.curselection()[0])
+
+        lab = self.all_lab_data[index]
+
+        i = 0
+        for name, user in lab["users"].iteritems():
+            self.all_lab_info_user_box.insert(i, user["name"])
+            i += 1
+
+
+        print "index: {}".format(index)
+
+
+    def update_curr_user(self, evt):
+        box = evt.widget
+        index = int(box.curselection()[0])
+
+        lab = self.lab_data[index]
+
+        i = 0
+        for name, user in lab["users"].iteritems():
+            self.all_lab_info_user_box.insert(i, user["name"])
+            i += 1
+
+        print "index: {}".format(index)
+
+
 if __name__ == "__main__":
 
     root = Tk()
