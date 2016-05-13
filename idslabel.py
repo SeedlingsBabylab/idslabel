@@ -16,6 +16,7 @@ from operator import itemgetter
 
 from Tkinter import *
 import tkFileDialog
+import tkSimpleDialog
 from tkMessageBox import showwarning
 
 
@@ -25,6 +26,8 @@ version = "0.0.4"
 server_url = "http://localhost:8080/getblock/"
 lab_info_url = "http://localhost:8080/labinfo/"
 all_lab_info_url = "http://localhost:8080/alllabinfo/"
+add_user_url = "http://localhost:8080/adduser/"
+submit_labels_url = "http://localhost:8080/submitlabels/"
 
 
 class Block:
@@ -116,6 +119,7 @@ class MainWindow:
         self.filemenu.add_command(label="Set Block Path", command=self.set_clip_path)
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
         self.filemenu.add_command(label="Get All Lab Info", command=self.get_all_lab_info)
+        self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
@@ -286,7 +290,10 @@ class MainWindow:
         self.all_lab_data = None
         self.curr_lab = None
 
+        self.lab_key = ""
+        self.lab_name = ""
 
+        self.parse_config()
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -1038,21 +1045,42 @@ class MainWindow:
         self.paths_text.configure(state="disabled")
 
     def get_blocks(self):
+        if not self.clip_directory:
+            showwarning("Set Audio Clips Directory", "You need to have a directory set before downloading blocks\n\n"+
+                        "(File -> Set Block Path)")
+            return
+        if self.codername_entry.get() == "CODER_NAME":
+            showwarning("Set Coder Name", "You need to set CODER_NAME before requesting blocks")
+            return
+
         for i in range(self.num_blocks_to_get):
             self.get_block()
 
     def get_block(self):
         payload = {}
-        payload["lab-key"] = "123456789"
+        payload["lab-key"] = self.lab_key
         payload["username"] = self.codername_entry.get()
 
         resp = requests.post(server_url, json=payload, stream=True, allow_redirects=False)
 
+        if resp.status_code == 204:
+            print "ran out of items"
+            return
 
-        params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
-        filename = params[1]['filename']
-        output_path = os.path.join(self.clip_directory, filename)
         if resp.ok:
+
+            params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
+            filename = params[1]['filename']
+            file_root = os.path.dirname(filename)
+            file_end = os.path.basename(filename)
+            block_path = os.path.join(self.clip_directory, file_root)
+
+            if not os.path.exists(block_path):
+                os.makedirs(block_path)
+
+
+            output_path = os.path.join(block_path, file_end)
+
             with open(output_path, "wb") as output:
                 output.write(resp.content)
 
@@ -1155,6 +1183,23 @@ class MainWindow:
 
         print "index: {}".format(index)
 
+    def add_user_to_server(self):
+        name = tkSimpleDialog.askstring(title="Add User", prompt="Username:")
+
+        payload = {"lab-key": self.lab_key,
+                   "lab-name": self.lab_name,
+                   "username": name}
+
+        resp = requests.post(add_user_url, json=payload, allow_redirects=False)
+
+        print name
+
+    def parse_config(self):
+        with open('config.json', "rU") as input:
+            config = json.load(input)
+
+            self.lab_key = config["lab-key"]
+            self.lab_name = config["lab-name"]
 
 if __name__ == "__main__":
 
