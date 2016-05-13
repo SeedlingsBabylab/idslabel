@@ -31,6 +31,10 @@ add_user_url = "http://localhost:8080/adduser/"
 submit_labels_url = "http://localhost:8080/submitlabels/"
 
 
+# class FileGroup:
+#     def __init__(self):
+#
+
 class Block:
     def __init__(self, index, clan_file):
 
@@ -41,6 +45,9 @@ class Block:
         self.sliced = False
         self.contains_fan_or_man = False
         self.dont_share = False
+
+    def sort_clips(self):
+        self.clips.sort(key=lambda x: x.clip_index)
 
 class Clip:
     def __init__(self, path, block_index, clip_index):
@@ -632,6 +639,73 @@ class MainWindow:
 
         return block
 
+    def create_block_from_zip(self, path_to_zip):
+        # extract the zipped block
+        zip = zipfile.ZipFile(path_to_zip)
+        clips_path = os.path.dirname(path_to_zip)
+        zip.extractall(clips_path)
+
+        # read the block's metadata from the csv file
+        csv_files = [x for x in os.listdir(clips_path) if ".csv" in x]
+        csv_file = ""
+        if len(csv_files) == 1:
+            csv_file = csv_files[0]
+
+        csv_data = []
+
+        csv_path = os.path.join(clips_path, csv_file)
+        with open(csv_path, "rU") as csv_input:
+            reader = csv.reader(csv_input)
+            reader.next()
+            for row in reader:
+                csv_data.append(row)
+
+        block_index = int(os.path.basename(path_to_zip).replace(".zip", ""))
+
+        block = Block(block_index, csv_data[0][2])
+
+        for file in os.listdir(clips_path):
+            if file.endswith(".wav"):
+                clip_index = int(file.replace(".wav", ""))
+                clip = Clip(os.path.join(clips_path, file), block_index, clip_index)
+                clip = self.fill_in_clip_info_from_csv(csv_data, clip)
+                clip.audio_path = os.path.join(clips_path, file)
+                block.clips.append(clip)
+
+        block.sort_clips()
+
+        return block
+
+    def fill_in_clip_info_from_csv(self, csv_array, clip):
+        clip_row = [row for row in csv_array if int(row[6]) == clip.clip_index]
+
+        if len(clip_row) == 1:
+            clip_row=clip_row[0]
+        else:
+            print "something wrong with the input csv. duplicate clips: clip# {}"\
+                .format(clip.clip_index)
+
+        clip.clan_file = clip_row[2]
+        clip.audio_file = clip_row[3]
+        clip.block_index = clip_row[4]
+        clip.timestamp = clip_row[5]
+        clip.clip_tier = clip_row[7]
+        clip.multi_tier_parent = clip_row[9]
+
+        if clip.multi_tier_parent != "N":
+            clip.multiline = True
+        else:
+            clip.multiline = False
+
+        time = clip.timestamp.split("_")
+        time = [int(time[0]), int(time[1])]
+        final_time = self.ms_to_hhmmss(time)
+
+        clip.start_time = str(final_time[0])
+        clip.offset_time = str(final_time[2])
+
+        return clip
+
     def load_previous_block2(self, event):
         selected_block = self.previous_block_menu.curselection()
         randomized_index = int(self.previous_block_menu.get(selected_block[0])[1:6].strip())
@@ -1085,9 +1159,9 @@ class MainWindow:
             with open(output_path, "wb") as output:
                 output.write(resp.content)
 
-            zip = zipfile.ZipFile(output_path)
-            zip.extractall(block_path)
+            block = self.create_block_from_zip(output_path)
 
+            print block
 
     def get_lab_info(self):
         self.lab_info_page = Toplevel()
@@ -1157,7 +1231,6 @@ class MainWindow:
 
         print
 
-
     def update_curr_lab(self, evt):
         box = evt.widget
         index = int(box.curselection()[0])
@@ -1171,7 +1244,6 @@ class MainWindow:
 
 
         print "index: {}".format(index)
-
 
     def update_curr_user(self, evt):
         box = evt.widget
