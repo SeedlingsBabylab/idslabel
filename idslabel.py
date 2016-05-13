@@ -10,6 +10,7 @@ import re
 import os
 import requests
 import cgi
+import zipfile
 import subprocess as sp
 
 from operator import itemgetter
@@ -1084,6 +1085,8 @@ class MainWindow:
             with open(output_path, "wb") as output:
                 output.write(resp.content)
 
+            zip = zipfile.ZipFile(output_path)
+            zip.extractall(block_path)
 
 
     def get_lab_info(self):
