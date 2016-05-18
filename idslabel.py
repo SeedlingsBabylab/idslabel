@@ -1357,8 +1357,7 @@ class MainWindow:
             self.lab_name = config["lab-name"]
 
     def submit_classifications(self):
-        #blocks = self.get_completed_blocks()
-        blocks = (self.clip_blocks, [])
+        blocks = self.get_completed_blocks()
 
         if len(blocks[1]) > 0:
             incomplete_blocks = ""
