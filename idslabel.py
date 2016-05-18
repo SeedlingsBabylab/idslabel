@@ -21,7 +21,7 @@ import tkSimpleDialog
 from tkMessageBox import showwarning
 
 
-version = "0.0.4"
+version = "0.0.5"
 
 
 server_url = "http://localhost:8080/getblock/"
@@ -45,9 +45,30 @@ class Block:
         self.sliced = False
         self.contains_fan_or_man = False
         self.dont_share = False
+        self.id = ""
+        self.coder = None
+        self.lab_key = None
 
     def sort_clips(self):
         self.clips.sort(key=lambda x: x.clip_index)
+
+    def to_dict(self):
+        block = {}
+
+        block["clips"] = []
+        for clip in self.clips:
+            block["clips"].append(clip.to_dict())
+
+        block["coder"] = self.coder
+        block["lab-key"] = self.lab_key
+        block["id"] = self.id
+        block["fan-or-man"] = self.contains_fan_or_man
+        block["dont-share"] = self.dont_share
+        block["clan-file"] = self.clan_file
+        block["block-index"] = self.index
+
+        return block
+
 
 class Clip:
     def __init__(self, path, block_index, clip_index):
@@ -65,6 +86,28 @@ class Clip:
         self.classification = None
         self.label_date = None
         self.coder = None
+        self.lab_key = None
+
+
+    def to_dict(self):
+        clip = {}
+
+        #clip["audio-path"] = self.audio_path
+        #clip["parent-audio-path"] = self.parent_audio_path
+        clip["clan-file"] = self.clan_file
+        clip["block-index"] = self.block_index
+        clip["clip-index"] = self.clip_index
+        clip["clip-tier"] = self.clip_tier
+        clip["multiline"] = self.multiline
+        clip["multi-tier-parent"] = self.multi_tier_parent
+        clip["start-time"] = self.start_time
+        clip["offset-time"] = self.offset_time
+        clip["timestamp"] = self.timestamp
+        clip["classification"] = self.classification
+        clip["label-date"] = self.label_date
+        clip["coder"] = self.coder
+
+        return clip
 
 
     def __repr__(self):
@@ -128,6 +171,7 @@ class MainWindow:
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
         self.filemenu.add_command(label="Get All Lab Info", command=self.get_all_lab_info)
         self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
+        self.filemenu.add_command(label="Submit Labels to Server", command=self.submit_classifications)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
@@ -252,7 +296,7 @@ class MainWindow:
 
         self.previous_block_menu = Listbox(self.main_frame, width=14, height=10)
 
-        self.previous_block_menu.bind("<Double-Button-1>", self.load_previous_block2)
+        self.previous_block_menu.bind("<Double-Button-1>", self.load_previous_block_downloaded)
 
         self.previous_block_menu.bind("<FocusIn>", self.reset_frame_focus)
 
@@ -283,7 +327,7 @@ class MainWindow:
                                 "r": "REGISTER_SWITCH"
                               }
 
-        self.num_blocks_to_get = 1
+        self.num_blocks_to_get = 3
 
         self.lab_info_page = None
         self.lab_info_user_box = None
@@ -664,6 +708,9 @@ class MainWindow:
 
         block = Block(block_index, csv_data[0][2])
 
+        block.coder = self.codername_entry.get()
+        block.lab_key = self.lab_key
+
         for file in os.listdir(clips_path):
             if file.endswith(".wav"):
                 clip_index = int(file.replace(".wav", ""))
@@ -673,6 +720,8 @@ class MainWindow:
                 block.clips.append(clip)
 
         block.sort_clips()
+
+        block.id = block.clan_file + ":::" + str(block.index)
 
         return block
 
@@ -711,6 +760,11 @@ class MainWindow:
         randomized_index = int(self.previous_block_menu.get(selected_block[0])[1:6].strip())
         #print self.previous_block_menu.get(selected_block[0])[1:6].strip()
         self.load_block(randomized_index)
+
+    def load_previous_block_downloaded(self, event):
+        selected_block = self.previous_block_menu.curselection()
+        index = int(self.previous_block_menu.get(selected_block[0]))
+        self.load_downloaded_block(index)
 
     def load_previous_block(self):
 
@@ -805,6 +859,28 @@ class MainWindow:
     def load_block(self, randomized_index):
         self.current_block = self.randomized_blocks[randomized_index-1]
         self.current_block_index = randomized_index
+
+        self.block_list.delete(0, END)
+
+        for index, element in enumerate(self.current_block.clips):
+            if element.multiline:
+                self.block_list.insert(index, element.clip_tier + " ^--")
+            else:
+                self.block_list.insert(index, element.clip_tier)
+
+        self.coded_block_label = Label(self.main_frame, text="coded block #{}".format(self.current_block_index + 1))
+        self.coded_block_label.grid(row=26, column=3)
+
+        self.current_clip = self.current_block.clips[0]
+
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(0)
+
+        self.update_curr_clip_info()
+
+    def load_downloaded_block(self, block_index):
+        self.current_block = self.clip_blocks[block_index]
+        self.current_block_index = block_index
 
         self.block_list.delete(0, END)
 
@@ -1131,6 +1207,8 @@ class MainWindow:
         for i in range(self.num_blocks_to_get):
             self.get_block()
 
+        self.load_downloaded_blocks()
+
     def get_block(self):
         payload = {}
         payload["lab-key"] = self.lab_key
@@ -1162,6 +1240,7 @@ class MainWindow:
             block = self.create_block_from_zip(output_path)
 
             print block
+            self.clip_blocks.append(block)
 
     def get_lab_info(self):
         self.lab_info_page = Toplevel()
@@ -1198,7 +1277,6 @@ class MainWindow:
                 self.lab_users.append(value["name"])
                 i+=1
         print
-
 
     def get_all_lab_info(self):
         self.all_lab_info_page = Toplevel()
@@ -1259,7 +1337,9 @@ class MainWindow:
         print "index: {}".format(index)
 
     def add_user_to_server(self):
-        name = tkSimpleDialog.askstring(title="Add User", prompt="Username:")
+        name = tkSimpleDialog.askstring(title="Add User",
+                                        prompt="Username:",
+                                        initialvalue=self.codername_entry.get())
 
         payload = {"lab-key": self.lab_key,
                    "lab-name": self.lab_name,
@@ -1275,6 +1355,59 @@ class MainWindow:
 
             self.lab_key = config["lab-key"]
             self.lab_name = config["lab-name"]
+
+    def submit_classifications(self):
+        #blocks = self.get_completed_blocks()
+        blocks = (self.clip_blocks, [])
+
+        if len(blocks[1]) > 0:
+            incomplete_blocks = ""
+            for block in blocks[1]:
+                incomplete_blocks += str(block.index) + " "
+            showwarning("Incomplete Blocks", "You haven't finished some of the blocks\n\n"+
+                        "blocks #: "+ incomplete_blocks + "\n\n" + "Only sending completed blocks")
+
+
+        for block in blocks[0]:
+            submission = block.to_dict()
+            resp = requests.post(submit_labels_url, json=submission, allow_redirects=False)
+
+            if resp.ok:
+                print "everything is ok"
+
+    def labels_to_json(self):
+
+        blocks = {}
+        blocks["blocks"] = {}
+
+        for block in self.clip_blocks:
+            blocks["blocks"][block.id] = []
+
+        for block in self.clip_blocks:
+            for clip in block.clips:
+                blocks["blocks"][block.id].append(clip.to_dict())
+
+        return blocks
+
+    def get_completed_blocks(self):
+        completed_blocks = []
+        incomplete_blocks = []
+        for block in self.clip_blocks:
+            unfinished_clips = []
+            for clip in block.clips:
+                if not clip.classification:
+                    unfinished_clips.append(clip)
+            if len(unfinished_clips) > 0:
+                incomplete_blocks.append(block)
+            else:
+                completed_blocks.append(block)
+
+        return (completed_blocks, incomplete_blocks)
+
+    def load_downloaded_blocks(self):
+        self.previous_block_menu.delete(0, END)
+        for index, block in enumerate(self.clip_blocks):
+            self.previous_block_menu.insert(index, str(index))
 
 if __name__ == "__main__":
 
