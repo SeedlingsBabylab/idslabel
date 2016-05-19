@@ -1204,8 +1204,12 @@ class MainWindow:
             showwarning("Set Coder Name", "You need to set CODER_NAME before requesting blocks")
             return
 
+        error_response = ""
         for i in range(self.num_blocks_to_get):
-            self.get_block()
+            error_response = self.get_block()
+
+        if error_response:
+            showwarning("Bad Request", "Server: " + error_response)
 
         self.load_downloaded_blocks()
 
@@ -1216,9 +1220,8 @@ class MainWindow:
 
         resp = requests.post(server_url, json=payload, stream=True, allow_redirects=False)
 
-        if resp.status_code == 204:
-            print "ran out of items"
-            return
+        if resp.status_code == 404:
+            return resp.content
 
         if resp.ok:
 
