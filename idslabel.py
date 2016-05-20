@@ -258,6 +258,16 @@ class MainWindow:
         self.codername_entry.grid(row=0, column=4)
         self.codername_entry.bind("<Return>", self.reset_frame_focus)
 
+
+        self.num_blocks_to_get = 3
+        self.block_request_num_entry = Entry(self.main_frame, width=7)
+        self.block_request_num_entry.insert(END, str(self.num_blocks_to_get))
+        self.block_request_num_entry.grid(row=1, column=4, sticky="E")
+        self.block_request_num_entry.bind("<Return>", self.enter_block_request_num)
+
+        self.block_num_label = Label(self.main_frame, text="  # blocks:", font="-weight bold")
+        self.block_num_label.grid(row=1, column=4, sticky="W")
+
         self.classification_conflict_label = None
 
         self.clips_processed_label = None
@@ -1412,6 +1422,10 @@ class MainWindow:
         self.previous_block_menu.delete(0, END)
         for index, block in enumerate(self.clip_blocks):
             self.previous_block_menu.insert(index, str(index))
+
+    def enter_block_request_num(self, event):
+        self.main_frame.focus_set()
+        self.num_blocks_to_get = int(self.block_request_num_entry.get())
 
 if __name__ == "__main__":
 
