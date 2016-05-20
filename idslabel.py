@@ -48,6 +48,7 @@ class Block:
         self.id = ""
         self.coder = None
         self.lab_key = None
+        self.lab_name = None
 
     def sort_clips(self):
         self.clips.sort(key=lambda x: x.clip_index)
@@ -61,6 +62,7 @@ class Block:
 
         block["coder"] = self.coder
         block["lab-key"] = self.lab_key
+        block["lab-name"] = self.lab_name
         block["id"] = self.id
         block["fan-or-man"] = self.contains_fan_or_man
         block["dont-share"] = self.dont_share
@@ -706,7 +708,7 @@ class MainWindow:
 
         block_index = int(os.path.basename(path_to_zip).replace(".zip", ""))
 
-        block = Block(block_index, csv_data[0][2])
+        block = Block(block_index, csv_data[0][2].replace(".cha", ""))
 
         block.coder = self.codername_entry.get()
         block.lab_key = self.lab_key
@@ -1220,7 +1222,7 @@ class MainWindow:
 
         resp = requests.post(server_url, json=payload, stream=True, allow_redirects=False)
 
-        if resp.status_code == 404:
+        if resp.status_code != 200:
             return resp.content
 
         if resp.ok:
