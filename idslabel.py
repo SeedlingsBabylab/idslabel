@@ -24,11 +24,11 @@ from tkMessageBox import showwarning
 version = "0.0.5"
 
 
-server_url = "http://localhost:8080/getblock/"
-lab_info_url = "http://localhost:8080/labinfo/"
-all_lab_info_url = "http://localhost:8080/alllabinfo/"
-add_user_url = "http://localhost:8080/adduser/"
-submit_labels_url = "http://localhost:8080/submitlabels/"
+get_block_url = ""
+lab_info_url = ""
+all_lab_info_url = ""
+add_user_url = ""
+submit_labels_url = ""
 
 
 # class FileGroup:
@@ -113,11 +113,12 @@ class Clip:
 
 
     def __repr__(self):
-        return "clip: {} - [block: {}] [tier: {}] [label: {}] [time: {}]".format(self.clip_index,
-                                                                                 self.block_index,
-                                                                                 self.clip_tier,
-                                                                                 self.classification,
-                                                                                 self.timestamp)
+        return "clip: {} - [block: {}] [tier: {}] [label: {}] [time: {}]"\
+                .format(self.clip_index,
+                        self.block_index,
+                        self.clip_tier,
+                        self.classification,
+                        self.timestamp)
 
 class MainWindow:
 
@@ -1230,7 +1231,7 @@ class MainWindow:
         payload["lab-key"] = self.lab_key
         payload["username"] = self.codername_entry.get()
 
-        resp = requests.post(server_url, json=payload, stream=True, allow_redirects=False)
+        resp = requests.post(get_block_url, json=payload, stream=True, allow_redirects=False)
 
         if resp.status_code != 200:
             return resp.content
@@ -1365,11 +1366,23 @@ class MainWindow:
         print name
 
     def parse_config(self):
+        global get_block_url
+        global lab_info_url
+        global all_lab_info_url
+        global add_user_url
+        global submit_labels_url
+
         with open('config.json', "rU") as input:
             config = json.load(input)
 
             self.lab_key = config["lab-key"]
             self.lab_name = config["lab-name"]
+
+            get_block_url = config["server-urls"]["get_block_url"]
+            lab_info_url = config["server-urls"]["lab_info_url"]
+            all_lab_info_url = config["server-urls"]["all_lab_info_url"]
+            add_user_url = config["server-urls"]["add_user_url"]
+            submit_labels_url = config["server-urls"]["submit_labels_url"]
 
     def submit_classifications(self):
         blocks = self.get_completed_blocks()
