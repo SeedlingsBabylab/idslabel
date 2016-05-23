@@ -11,6 +11,7 @@ import os
 import requests
 import cgi
 import zipfile
+import shutil
 import subprocess as sp
 
 from operator import itemgetter
@@ -1401,6 +1402,8 @@ class MainWindow:
 
             if resp.ok:
                 print "everything is ok"
+                self.cleanup_block_data(block)
+
 
     def labels_to_json(self):
 
@@ -1439,6 +1442,14 @@ class MainWindow:
     def enter_block_request_num(self, event):
         self.main_frame.focus_set()
         self.num_blocks_to_get = int(self.block_request_num_entry.get())
+
+    def cleanup_block_data(self, block):
+        print block
+        clips_path = ""
+        for clip in block.clips:
+            os.remove(clip.audio_path)
+            clips_path = os.path.dirname(clip.audio_path)
+        shutil.rmtree(clips_path)
 
 if __name__ == "__main__":
 
