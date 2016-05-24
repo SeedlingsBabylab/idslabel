@@ -50,6 +50,7 @@ class Block:
         self.coder = None
         self.lab_key = None
         self.lab_name = None
+        self.old = False
 
     def sort_clips(self):
         self.clips.sort(key=lambda x: x.clip_index)
@@ -305,7 +306,7 @@ class MainWindow:
         self.loaded_block_history = []
         self.on_first_block = False
 
-        self.previous_block_label = Label(self.main_frame, text="Load Previous Block:")
+        self.previous_block_label = Label(self.main_frame, text="Load Block:")
         self.previous_block_label.grid(row=4, column=4)
 
         self.previous_block_menu = Listbox(self.main_frame, width=14, height=10)
@@ -360,6 +361,8 @@ class MainWindow:
         self.lab_name = ""
 
         self.parse_config()
+
+        self.prev_downl_blocks = []
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -739,6 +742,45 @@ class MainWindow:
 
         return block
 
+    def create_block_from_clips(self, path_to_zip):
+        clips_path = os.path.dirname(path_to_zip)
+
+        # read the block's metadata from the csv file
+        csv_files = [x for x in os.listdir(clips_path) if ".csv" in x]
+        csv_file = ""
+        if len(csv_files) == 1:
+            csv_file = csv_files[0]
+
+        csv_data = []
+
+        csv_path = os.path.join(clips_path, csv_file)
+        with open(csv_path, "rU") as csv_input:
+            reader = csv.reader(csv_input)
+            reader.next()
+            for row in reader:
+                csv_data.append(row)
+
+        block_index = int(os.path.basename(path_to_zip).replace(".zip", ""))
+
+        block = Block(block_index, csv_data[0][2].replace(".cha", ""))
+
+        block.coder = self.codername_entry.get()
+        block.lab_key = self.lab_key
+
+        for file in os.listdir(clips_path):
+            if file.endswith(".wav"):
+                clip_index = int(file.replace(".wav", ""))
+                clip = Clip(os.path.join(clips_path, file), block_index, clip_index)
+                clip = self.fill_in_clip_info_from_csv(csv_data, clip)
+                clip.audio_path = os.path.join(clips_path, file)
+                block.clips.append(clip)
+
+        block.sort_clips()
+
+        block.id = block.clan_file + ":::" + str(block.index)
+
+        return block
+
     def fill_in_clip_info_from_csv(self, csv_array, clip):
         clip_row = [row for row in csv_array if int(row[6]) == clip.clip_index]
 
@@ -777,7 +819,8 @@ class MainWindow:
 
     def load_previous_block_downloaded(self, event):
         selected_block = self.previous_block_menu.curselection()
-        index = int(self.previous_block_menu.get(selected_block[0]))
+        index = int(selected_block[0])
+        #index = int(self.previous_block_menu.get(selected_block[0]))
         self.load_downloaded_block(index)
 
     def load_previous_block(self):
@@ -1022,6 +1065,8 @@ class MainWindow:
 
     def set_clip_path(self):
         self.clip_directory = tkFileDialog.askdirectory()
+        self.prev_downl_blocks = self.load_previously_downl_blocks()
+        self.clip_blocks.extend(self.prev_downl_blocks)
 
     def save_as_classifications(self, event):
         self.set_classification_output()
@@ -1224,6 +1269,7 @@ class MainWindow:
 
         if error_response:
             showwarning("Bad Request", "Server: " + error_response)
+            return
 
         self.load_downloaded_blocks()
 
@@ -1403,7 +1449,10 @@ class MainWindow:
             if resp.ok:
                 print "everything is ok"
                 self.cleanup_block_data(block)
+                block_index = self.clip_blocks.index(block)
+                del self.clip_blocks[block_index]
 
+        self.load_downloaded_blocks()
 
     def labels_to_json(self):
 
@@ -1437,7 +1486,25 @@ class MainWindow:
     def load_downloaded_blocks(self):
         self.previous_block_menu.delete(0, END)
         for index, block in enumerate(self.clip_blocks):
-            self.previous_block_menu.insert(index, str(index))
+            block_string = str(index)
+            if block.old:
+                block_string += " - old"
+            else:
+                block_string += " - new"
+            self.previous_block_menu.insert(index, block_string)
+
+    def load_previously_downl_blocks(self):
+        blocks = []
+        for root, dirs, files in os.walk(self.clip_directory):
+            if any(".zip" in file for file in files):
+                zips = [x for x in files if ".zip" in x]
+                if len(zips) > 0:
+                    zipfile = os.path.join(root, zips[0])
+                    block = self.create_block_from_clips(zipfile)
+                    block.old = True
+                    blocks.append(block)
+
+        return blocks
 
     def enter_block_request_num(self, event):
         self.main_frame.focus_set()
