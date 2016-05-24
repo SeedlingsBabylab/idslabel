@@ -820,7 +820,6 @@ class MainWindow:
     def load_previous_block_downloaded(self, event):
         selected_block = self.previous_block_menu.curselection()
         index = int(selected_block[0])
-        #index = int(self.previous_block_menu.get(selected_block[0]))
         self.load_downloaded_block(index)
 
     def load_previous_block(self):
@@ -1067,6 +1066,7 @@ class MainWindow:
         self.clip_directory = tkFileDialog.askdirectory()
         self.prev_downl_blocks = self.load_previously_downl_blocks()
         self.clip_blocks.extend(self.prev_downl_blocks)
+        self.print_paths()
 
     def save_as_classifications(self, event):
         self.set_classification_output()
@@ -1089,21 +1089,22 @@ class MainWindow:
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
                              "timestamp", "clip", "tier", "label", "multi-tier-parent", "dont_share"])
 
-            for block in self.randomized_blocks:
-                dont_share = False
-                if block.dont_share:
-                    dont_share = True
-                multitier_parent = None
-                for clip in block.clips:
-                    if clip.multiline:
-                        multitier_parent = clip.multi_tier_parent
-                    else:
-                        multitier_parent = "N"
+            block = self.current_block
+            dont_share = False
+            if block.dont_share:
+                dont_share = True
 
-                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
-                                     clip.parent_audio_path, clip.block_index,
-                                     clip.timestamp, clip.clip_index,clip.clip_tier,
-                                     clip.classification, multitier_parent, dont_share])
+            multitier_parent = None
+            for clip in block.clips:
+                if clip.multiline:
+                    multitier_parent = clip.multi_tier_parent
+                else:
+                    multitier_parent = "N"
+
+                writer.writerow([clip.label_date, clip.coder, clip.clan_file,
+                                 clip.parent_audio_path, clip.block_index,
+                                 clip.timestamp, clip.clip_index,clip.clip_tier,
+                                 clip.classification, multitier_parent, dont_share])
 
     def blocks_to_csv(self):
 
@@ -1269,7 +1270,7 @@ class MainWindow:
 
         if error_response:
             showwarning("Bad Request", "Server: " + error_response)
-            return
+            #return
 
         self.load_downloaded_blocks()
 
@@ -1434,6 +1435,7 @@ class MainWindow:
     def submit_classifications(self):
         blocks = self.get_completed_blocks()
 
+
         if len(blocks[1]) > 0:
             incomplete_blocks = ""
             for block in blocks[1]:
@@ -1445,6 +1447,10 @@ class MainWindow:
         for block in blocks[0]:
             submission = block.to_dict()
             resp = requests.post(submit_labels_url, json=submission, allow_redirects=False)
+
+            if resp.status_code != 200:
+                showwarning("Bad Request", "Server: " + resp.content)
+                return
 
             if resp.ok:
                 print "everything is ok"
