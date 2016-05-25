@@ -32,10 +32,6 @@ add_user_url = ""
 submit_labels_url = ""
 
 
-# class FileGroup:
-#     def __init__(self):
-#
-
 class Block:
     def __init__(self, index, clan_file):
 
@@ -225,6 +221,10 @@ class MainWindow:
                                                     text="Save Classifications",
                                                     command=self.output_classifications)
 
+        self.submit_labels_to_server_button = Button(self.main_frame,
+                                                     text="Submit Labels to Server",
+                                                     command=self.submit_classifications)
+
         self.load_classifications_button = Button(self.main_frame,
                                                   text="Load Classifications",
                                                   command=self.load_classifications)
@@ -242,6 +242,7 @@ class MainWindow:
         self.play_clip_button.grid(row=3, column=2)
         self.next_clip_button.grid(row=4, column=2)
         self.output_classifications_button.grid(row=5, column=2)
+        self.submit_labels_to_server_button.grid(row=6, column=2)
         #self.load_classifications_button.grid(row=8, column=2, rowspan=2)
 
         self.block_list = Listbox(self.main_frame, width=15, height=25)
@@ -414,14 +415,13 @@ class MainWindow:
 
     def codername_entered(self, event):
         if not self.clip_directory:
-            self.clip_directory = tkFileDialog.askdirectory(title="Choose directory to store downloaded blocks")
+            showwarning("Clips Directory", "Choose directory to store downloaded blocks")
+            self.clip_directory = tkFileDialog.askdirectory()
         self.prev_downl_blocks = self.load_previously_downl_blocks()
         self.clip_blocks.extend(self.prev_downl_blocks)
         self.load_downloaded_blocks()
         self.print_paths()
         self.main_frame.focus_set()
-
-
 
     def load_clan(self):
         try:
@@ -616,11 +616,6 @@ class MainWindow:
             out, err = pipe.communicate()
         # showwarning("command output", "{}".format(out))
         # showwarning("command err", "{}".format(err))
-
-    def slice_all_randomized_blocks(self):
-
-        for block in self.randomized_blocks:
-            self.slice_block(block)
 
     def create_random_block_range(self):
 
@@ -1468,7 +1463,6 @@ class MainWindow:
 
     def submit_classifications(self):
         blocks = self.get_completed_blocks()
-
 
         if len(blocks[1]) > 0:
             incomplete_blocks = ""
