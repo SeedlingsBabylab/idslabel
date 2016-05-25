@@ -417,6 +417,7 @@ class MainWindow:
         if not self.clip_directory:
             showwarning("Clips Directory", "Choose directory to store downloaded blocks")
             self.clip_directory = tkFileDialog.askdirectory()
+        del self.clip_blocks[:]
         self.prev_downl_blocks = self.load_previously_downl_blocks()
         self.clip_blocks.extend(self.prev_downl_blocks)
         self.load_downloaded_blocks()
