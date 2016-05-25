@@ -259,7 +259,7 @@ class MainWindow:
         self.codername_entry = Entry(self.main_frame, width=15, font="-weight bold")
         self.codername_entry.insert(END, "CODER_NAME")
         self.codername_entry.grid(row=0, column=4)
-        self.codername_entry.bind("<Return>", self.reset_frame_focus)
+        self.codername_entry.bind("<Return>", self.codername_entered)
 
 
         self.num_blocks_to_get = 3
@@ -346,6 +346,8 @@ class MainWindow:
 
         self.lab_info_page = None
         self.lab_info_user_box = None
+        self.lab_info_user_work_box = None
+        self.lab_info_user_past_work_box = None
         self.curr_user = None
         self.lab_data = None
         self.lab_users = []
@@ -409,6 +411,17 @@ class MainWindow:
 
     def reset_frame_focus(self, event):
         self.main_frame.focus_set()
+
+    def codername_entered(self, event):
+        if not self.clip_directory:
+            self.clip_directory = tkFileDialog.askdirectory(title="Choose directory to store downloaded blocks")
+        self.prev_downl_blocks = self.load_previously_downl_blocks()
+        self.clip_blocks.extend(self.prev_downl_blocks)
+        self.load_downloaded_blocks()
+        self.print_paths()
+        self.main_frame.focus_set()
+
+
 
     def load_clan(self):
         try:
@@ -1309,25 +1322,29 @@ class MainWindow:
     def get_lab_info(self):
         self.lab_info_page = Toplevel()
         self.lab_info_page.title("Lab Info")
-        self.lab_info_page.geometry("450x400")
+        self.lab_info_page.geometry("600x400")
 
-        users_label = Label(self.all_lab_info_page, text="Users")
+        users_label = Label(self.lab_info_page, text="Users")
         users_label.grid(row=0, column=0)
 
-        work_item_label = Label(self.all_lab_info_page, text="Work Items")
+        work_item_label = Label(self.lab_info_page, text="Active Work Items")
         work_item_label.grid(row=0, column=1)
+
+        work_item_label = Label(self.lab_info_page, text="Finished Work Items")
+        work_item_label.grid(row=0, column=2)
 
         self.lab_info_user_box = Listbox(self.lab_info_page, width=15, height=20)
         self.lab_info_user_box.grid(row=1, column=0)
-        self.all_lab_info_lab_box.bind('<<ListboxSelect>>', self.update_curr_user)
+        self.lab_info_user_box.bind('<<ListboxSelect>>', self.update_curr_user)
 
-        self.lab_info_user_work_box = Listbox(self.lab_info_page, width=15, height=20)
+        self.lab_info_user_work_box = Listbox(self.lab_info_page, width=22, height=20)
         self.lab_info_user_work_box.grid(row=1, column=1)
 
-        self.lab_info_user_past_work_box = Listbox(self.lab_info_page, width=15, height=20)
+        self.lab_info_user_past_work_box = Listbox(self.lab_info_page, width=22, height=20)
         self.lab_info_user_past_work_box.grid(row=1, column=2)
 
-        payload = {"lab-key": "1234567654321"}
+
+        payload = {"lab-key": self.lab_key}
 
         resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
 
@@ -1373,6 +1390,15 @@ class MainWindow:
 
         print
 
+    def lab_info_ping(self):
+        payload = {"lab-key": self.lab_key}
+
+        resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
+
+        if resp.ok:
+            self.lab_data = json.loads(resp.content)
+            return self.lab_data
+
     def update_curr_lab(self, evt):
         box = evt.widget
         index = int(box.curselection()[0])
@@ -1391,11 +1417,19 @@ class MainWindow:
         box = evt.widget
         index = int(box.curselection()[0])
 
-        lab = self.lab_data[index]
+        user = box.get(index)
+        user_data = self.lab_data["users"][str(user)]
 
         i = 0
-        for name, user in lab["users"].iteritems():
-            self.all_lab_info_user_box.insert(i, user["name"])
+        self.lab_info_user_work_box.delete(0, END)
+        for item in user_data["active-work-items"]:
+            self.lab_info_user_work_box.insert(i, item["id"])
+            i += 1
+
+        i = 0
+        self.lab_info_user_past_work_box.delete(0, END)
+        for item in user_data["finished-work-items"]:
+            self.lab_info_user_past_work_box.insert(i, item["id"])
             i += 1
 
         print "index: {}".format(index)
@@ -1490,6 +1524,7 @@ class MainWindow:
         return (completed_blocks, incomplete_blocks)
 
     def load_downloaded_blocks(self):
+
         self.previous_block_menu.delete(0, END)
         for index, block in enumerate(self.clip_blocks):
             block_string = str(index)
@@ -1501,6 +1536,20 @@ class MainWindow:
 
     def load_previously_downl_blocks(self):
         blocks = []
+
+        self.lab_info_ping()
+
+        user = self.codername_entry.get()
+        users = self.lab_data["users"]
+
+        if user not in users:
+            showwarning("Set Coder Name", "CODER_NAME: \"{}\" , is not known by the server.\n\n".format(user) +\
+            "Either add it (File -> Add User to Server), or use an already registered name")
+            return []
+
+        user_data = users[user]
+        user_active_blocks = user_data["active-work-items"]
+
         for root, dirs, files in os.walk(self.clip_directory):
             if any(".zip" in file for file in files):
                 zips = [x for x in files if ".zip" in x]
@@ -1508,9 +1557,19 @@ class MainWindow:
                     zipfile = os.path.join(root, zips[0])
                     block = self.create_block_from_clips(zipfile)
                     block.old = True
-                    blocks.append(block)
+                    if self.block_belongs_to_user(block, user_active_blocks):
+                        blocks.append(block)
 
         return blocks
+
+    def block_belongs_to_user(self, block, user_active_items):
+        if user_active_items is None:
+            return False
+
+        for element in user_active_items:
+            if element["id"] == block.id:
+                return True
+        return False
 
     def enter_block_request_num(self, event):
         self.main_frame.focus_set()
