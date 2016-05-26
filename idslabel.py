@@ -419,7 +419,8 @@ class MainWindow:
             self.clip_directory = tkFileDialog.askdirectory()
         del self.clip_blocks[:]
         self.prev_downl_blocks = self.load_previously_downl_blocks()
-        self.clip_blocks.extend(self.prev_downl_blocks)
+        if self.prev_downl_blocks:
+            self.clip_blocks.extend(self.prev_downl_blocks)
         self.load_downloaded_blocks()
         self.print_paths()
         self.main_frame.focus_set()
@@ -1297,8 +1298,8 @@ class MainWindow:
 
             params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
             filename = params[1]['filename']
-            file_root = os.path.dirname(filename)
             file_end = os.path.basename(filename)
+            file_root = "{}_{}_block{}".format(self.codername_entry.get(), os.path.dirname(filename), file_end)
             block_path = os.path.join(self.clip_directory, file_root)
 
             if not os.path.exists(block_path):
@@ -1394,6 +1395,10 @@ class MainWindow:
         if resp.ok:
             self.lab_data = json.loads(resp.content)
             return self.lab_data
+        else:
+            showwarning("Bad Request", "User: \"{}\" does not exist on the server.\n\n".format(self.codername_entry.get())+\
+                                       "(File -> Add User to Server)")
+            return
 
     def update_curr_lab(self, evt):
         box = evt.widget
@@ -1418,17 +1423,17 @@ class MainWindow:
 
         i = 0
         self.lab_info_user_work_box.delete(0, END)
-        for item in user_data["active-work-items"]:
-            self.lab_info_user_work_box.insert(i, item["id"])
-            i += 1
+        if user_data["active-work-items"]:
+            for item in user_data["active-work-items"]:
+                self.lab_info_user_work_box.insert(i, item["id"])
+                i += 1
 
         i = 0
         self.lab_info_user_past_work_box.delete(0, END)
-        for item in user_data["finished-work-items"]:
-            self.lab_info_user_past_work_box.insert(i, item["id"])
-            i += 1
-
-        print "index: {}".format(index)
+        if user_data["finished-work-items"]:
+            for item in user_data["finished-work-items"]:
+                self.lab_info_user_past_work_box.insert(i, item["id"])
+                i += 1
 
     def add_user_to_server(self):
         name = tkSimpleDialog.askstring(title="Add User",
@@ -1535,6 +1540,10 @@ class MainWindow:
         self.lab_info_ping()
 
         user = self.codername_entry.get()
+
+        if not self.lab_data:
+            return
+
         users = self.lab_data["users"]
 
         if user not in users:
