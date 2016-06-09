@@ -170,7 +170,7 @@ class MainWindow:
         self.filemenu.add_command(label="Load Saved Classifications", command=self.load_classifications)
         self.filemenu.add_command(label="Set Block Path", command=self.set_clip_path)
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
-        self.filemenu.add_command(label="Get All Lab Info", command=self.get_all_lab_info)
+        #self.filemenu.add_command(label="Get All Lab Info", command=self.get_all_lab_info)
         self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
         self.filemenu.add_command(label="Submit Labels to Server", command=self.submit_classifications)
 
@@ -233,11 +233,11 @@ class MainWindow:
                                         text="Get Blocks",
                                         command=self.get_blocks)
 
-        self.load_clan_button.grid(row=0, column=0)
-        self.load_audio_button.grid(row=0, column=1)
+        #self.load_clan_button.grid(row=0, column=0)
+        #self.load_audio_button.grid(row=0, column=1)
         self.get_blocks_button.grid(row=0, column=2)
 
-        self.load_rand_block_button.grid(row=1, column=2)
+        #self.load_rand_block_button.grid(row=1, column=2)
         self.play_block_button.grid(row=2, column=2)
         self.play_clip_button.grid(row=3, column=2)
         self.next_clip_button.grid(row=4, column=2)
@@ -291,18 +291,18 @@ class MainWindow:
 
         self.curr_clip_info.configure(state="disabled")
 
-        self.block_condition_var = IntVar()
-        self.block_condition_button = Checkbutton(self.main_frame, text="only load blocks with\nat least 1 FAN/MAN\ntier", variable=self.block_condition_var)
-        self.block_condition_button.select()
-        self.block_condition_button.grid(row=2, column=4)
-
-        self.dont_share_var = IntVar()
-        self.dont_share_button = Checkbutton(self.main_frame,
-                                             text="don't share this block",
-                                             variable=self.dont_share_var,
-                                             command=self.set_curr_block_dontshare)
-
-        self.dont_share_button.grid(row=3, column=4)
+        # self.block_condition_var = IntVar()
+        # self.block_condition_button = Checkbutton(self.main_frame, text="only load blocks with\nat least 1 FAN/MAN\ntier", variable=self.block_condition_var)
+        # self.block_condition_button.select()
+        # self.block_condition_button.grid(row=2, column=4)
+        #
+        # self.dont_share_var = IntVar()
+        # self.dont_share_button = Checkbutton(self.main_frame,
+        #                                      text="don't share this block",
+        #                                      variable=self.dont_share_var,
+        #                                      command=self.set_curr_block_dontshare)
+        #
+        # self.dont_share_button.grid(row=3, column=4)
 
         self.loaded_block_history = []
         self.on_first_block = False
@@ -363,7 +363,7 @@ class MainWindow:
         self.lab_key = ""
         self.lab_name = ""
 
-        self.parse_config()
+        #self.parse_config()
 
         self.prev_downl_blocks = []
 
@@ -1159,10 +1159,10 @@ class MainWindow:
         shft_space = "\tshift + space : play whole block\n"
 
         textbox.insert('1.0', general+\
-                                load_audio+\
-                                load_clan+\
-                                load_block+\
-                                load_prev_block+\
+                                #load_audio+\
+                                #load_clan+\
+                                #load_block+\
+                                #load_prev_block+\
                                 save_labels+\
                                 save_labels_win+\
                                 save_as+\
@@ -1289,6 +1289,9 @@ class MainWindow:
         payload["lab-key"] = self.lab_key
         payload["username"] = self.codername_entry.get()
 
+        if not get_block_url:
+            self.parse_config()
+
         resp = requests.post(get_block_url, json=payload, stream=True, allow_redirects=False)
 
         if resp.status_code != 200:
@@ -1388,7 +1391,11 @@ class MainWindow:
         print
 
     def lab_info_ping(self):
+        if not lab_info_url:
+            self.parse_config()
+
         payload = {"lab-key": self.lab_key}
+
 
         resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
 
@@ -1398,6 +1405,7 @@ class MainWindow:
         else:
             showwarning("Bad Request", "User: \"{}\" does not exist on the server.\n\n".format(self.codername_entry.get())+\
                                        "(File -> Add User to Server)")
+            print resp.content
             return
 
     def update_curr_lab(self, evt):
@@ -1455,7 +1463,10 @@ class MainWindow:
         global add_user_url
         global submit_labels_url
 
-        with open('config.json', "rU") as input:
+        showwarning("Config File", "Please choose a config.json file to load")
+        config_path = tkFileDialog.askopenfilename()
+
+        with open(config_path, "rU") as input:
             config = json.load(input)
 
             self.lab_key = config["lab-key"]
