@@ -1525,8 +1525,9 @@ class MainWindow:
         for block in self.clip_blocks:
             unfinished_clips = []
             for clip in block.clips:
-                if not clip.classification:
-                    unfinished_clips.append(clip)
+                if clip.clip_tier == "FAN" or clip.clip_tier == "MAN":
+                    if not clip.classification:
+                        unfinished_clips.append(clip)
             if len(unfinished_clips) > 0:
                 incomplete_blocks.append(block)
             else:
