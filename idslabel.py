@@ -22,7 +22,7 @@ import tkSimpleDialog
 from tkMessageBox import showwarning
 
 
-version = "0.0.5"
+version = "0.0.6"
 
 
 get_block_url = ""
@@ -495,7 +495,7 @@ class MainWindow:
 
     def play_clip(self):
         current_clip = self.block_list.curselection()
-        clip_index = current_clip[0]
+        clip_index = int(current_clip[0])
 
         clip_path = self.current_block.clips[clip_index].audio_path
         chunk = 1024
