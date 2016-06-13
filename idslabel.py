@@ -295,14 +295,14 @@ class MainWindow:
         # self.block_condition_button = Checkbutton(self.main_frame, text="only load blocks with\nat least 1 FAN/MAN\ntier", variable=self.block_condition_var)
         # self.block_condition_button.select()
         # self.block_condition_button.grid(row=2, column=4)
-        #
-        # self.dont_share_var = IntVar()
-        # self.dont_share_button = Checkbutton(self.main_frame,
-        #                                      text="don't share this block",
-        #                                      variable=self.dont_share_var,
-        #                                      command=self.set_curr_block_dontshare)
-        #
-        # self.dont_share_button.grid(row=3, column=4)
+
+        self.dont_share_var = IntVar()
+        self.dont_share_button = Checkbutton(self.main_frame,
+                                             text="don't share this block",
+                                             variable=self.dont_share_var,
+                                             command=self.set_curr_block_dontshare)
+
+        self.dont_share_button.grid(row=3, column=4)
 
         self.loaded_block_history = []
         self.on_first_block = False
@@ -1140,7 +1140,7 @@ class MainWindow:
         save_labels     = "\tcmd   + s             : save classifications     (Mac)\n"
         save_labels_win = "\tctrl  + s             : save classifications     (Linux/Windows)\n"
         save_as         = "\tcmd   + shift + s     : save as classifications  (Mac)\n"
-        save_as_win     = "\tctrl  + shift + s     : save classifications     (Linux/Windows)\n"
+        save_as_win     = "\tctrl  + shift + s     : save as classifications  (Linux/Windows)\n"
 
         classification = "\nClassification Keys:\n\n"
         ids        = "\tc : CDS\n"
