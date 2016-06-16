@@ -22,7 +22,7 @@ import tkSimpleDialog
 from tkMessageBox import showwarning
 
 
-version = "0.0.6"
+version = "0.0.7"
 
 
 get_block_url = ""
@@ -84,6 +84,7 @@ class Clip:
         self.offset_time = None
         self.timestamp = None
         self.classification = None
+        self.gender_label = None
         self.label_date = None
         self.coder = None
         self.lab_key = None
@@ -104,6 +105,7 @@ class Clip:
         clip["offset-time"] = self.offset_time
         clip["timestamp"] = self.timestamp
         clip["classification"] = self.classification
+        clip["gender-label"] = self.gender_label
         clip["label-date"] = self.label_date
         clip["coder"] = self.coder
 
@@ -172,7 +174,8 @@ class MainWindow:
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
         #self.filemenu.add_command(label="Get All Lab Info", command=self.get_all_lab_info)
         self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
-        self.filemenu.add_command(label="Submit Labels to Server", command=self.submit_classifications)
+        self.filemenu.add_command(label="Submit Block", command=self.submit_block)
+        self.filemenu.add_command(label="Submit All Blocks", command=self.submit_all_blocks)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
@@ -218,12 +221,16 @@ class MainWindow:
                                        command=self.next_clip)
 
         self.output_classifications_button = Button(self.main_frame,
-                                                    text="Save Classifications",
+                                                    text="Save Labels",
                                                     command=self.output_classifications)
 
         self.submit_labels_to_server_button = Button(self.main_frame,
-                                                     text="Submit Labels to Server",
-                                                     command=self.submit_classifications)
+                                                     text="Submit Block",
+                                                     command=self.submit_block)
+
+        self.submit_all_labels_to_server_button = Button(self.main_frame,
+                                                     text="Submit All Blocks",
+                                                     command=self.submit_all_blocks)
 
         self.load_classifications_button = Button(self.main_frame,
                                                   text="Load Classifications",
@@ -243,6 +250,7 @@ class MainWindow:
         self.next_clip_button.grid(row=4, column=2)
         self.output_classifications_button.grid(row=5, column=2)
         self.submit_labels_to_server_button.grid(row=6, column=2)
+        self.submit_all_labels_to_server_button.grid(row=7, column=2)
         #self.load_classifications_button.grid(row=8, column=2, rowspan=2)
 
         self.block_list = Listbox(self.main_frame, width=15, height=25)
@@ -253,7 +261,11 @@ class MainWindow:
         self.block_count_label = None
 
 
-        self.curr_clip_info = Text(self.main_frame, width=50, height=10)
+        self.curr_clip_info = Text(self.main_frame, width=50, height=15)
+        self.curr_clip_info.tag_add("label", 1.0, 11.10)
+        self.curr_clip_info.tag_add("gender", 11.6, 11.10)
+        self.curr_clip_info.tag_configure("label", foreground="red")
+        self.curr_clip_info.tag_configure("gender", foreground="blue")
         self.curr_clip_info.grid(row=3, column=0, rowspan=8, columnspan=2)
 
 
@@ -343,6 +355,12 @@ class MainWindow:
                                 "r": "REGISTER_SWITCH"
                               }
 
+        self.gender_label_map = {
+            "M": "MALE",
+            "F": "FEMALE",
+            "U": "UNCLEAR"
+        }
+
         self.num_blocks_to_get = 3
 
         self.lab_info_page = None
@@ -378,17 +396,34 @@ class MainWindow:
             if self.codername_entry.get() == "CODER_NAME":
                 showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
                 return
+
+            if self.current_clip.clip_tier not in ["FAN", "MAN"]:
+                return
             self.current_clip.classification = self.key_label_map[selected_key]
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
             self.update_curr_clip_info()
 
-        if selected_key == "C":
-            self.load_clan()
-        if selected_key == "A":
-            self.load_audio()
-        if selected_key == "|":
-            self.load_previous_block()
+        if selected_key in self.gender_label_map:
+            if not self.current_clip:
+                self.set_curr_clip(0)
+            if self.codername_entry.get() == "CODER_NAME":
+                showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
+                return
+
+            if self.current_clip.clip_tier not in ["FAN", "MAN"]:
+                return
+            self.current_clip.label_date = time.strftime("%m/%d/%Y")
+            self.current_clip.coder = self.codername_entry.get()
+            self.current_clip.gender_label = self.gender_label_map[selected_key]
+            self.update_curr_clip_info()
+
+        # if selected_key == "C":
+        #     self.load_clan()
+        # if selected_key == "A":
+        #     self.load_audio()
+        # if selected_key == "|":
+        #     self.load_previous_block()
         if selected_key == "O":
             self.output_classifications()
 
@@ -953,8 +988,12 @@ class MainWindow:
         for index, element in enumerate(self.current_block.clips):
             if element.multiline:
                 self.block_list.insert(index, element.clip_tier + " ^--")
+                if element.clip_tier not in ["FAN", "MAN"]:
+                    self.block_list.itemconfig(index, fg="grey")
             else:
                 self.block_list.insert(index, element.clip_tier)
+                if element.clip_tier not in ["FAN", "MAN"]:
+                    self.block_list.itemconfig(index, fg="grey")
 
         self.coded_block_label = Label(self.main_frame, text="coded block #{}".format(self.current_block_index + 1))
         self.coded_block_label.grid(row=26, column=3)
@@ -984,21 +1023,29 @@ class MainWindow:
         block       = "block:       {}\n".format(self.current_clip.block_index)
         clip        = "clip:        {}\n".format(self.current_clip.clip_index)
         tier        = "tier:        {}\n".format(self.current_clip.clip_tier)
-        label       = "label:       {}\n".format(self.current_clip.classification)
+
         time        = "timestamp:   {}\n".format(self.current_clip.timestamp)
         clip_length = "clip length: {}\n".format(self.current_clip.offset_time)
         coder       = "coder:       {}\n".format(self.current_clip.coder)
-        clanfile    = "clan file:   {}\n".format(self.current_clip.clan_file)
+        clanfile    = "clan file:   {}\n\n\n".format(self.current_clip.clan_file)
+        label       = "label:       {}\n".format(self.current_clip.classification)
+        gender      = "gender:      {}\n".format(self.current_clip.gender_label)
 
         self.curr_clip_info.insert('1.0',
                                     block+\
                                     clip+\
                                     tier+\
-                                    label+\
                                     time+\
                                     clip_length+\
                                     coder+\
-                                    clanfile)
+                                    clanfile+\
+                                    label+\
+                                    gender)
+
+        self.curr_clip_info.tag_add("label", 10.6, 11.0)
+        self.curr_clip_info.tag_add("gender", 11.7, 12.0)
+        self.curr_clip_info.tag_configure("label", foreground="red")
+        self.curr_clip_info.tag_configure("gender", foreground="#333ccc333")
 
         self.curr_clip_info.configure(state="disabled")
 
@@ -1127,8 +1174,8 @@ class MainWindow:
     def show_shortcuts(self):
         self.shortcuts_menu = Toplevel()
         self.shortcuts_menu.title("Shortcuts")
-        self.shortcuts_menu.geometry("530x400")
-        textbox = Text(self.shortcuts_menu)
+        self.shortcuts_menu.geometry("540x470")
+        textbox = Text(self.shortcuts_menu, width=90, height=30)
         textbox.pack()
 
 
@@ -1148,7 +1195,11 @@ class MainWindow:
         noise      = "\tn : Child Noises\n"
         reg_switch = "\tr : Register Switch\n"
         mult_addr  = "\tm : Multiple Addressee\n"
-        junk       = "\tj : Junk\n"
+        junk       = "\tj : Junk\n\n"
+
+        male       = "\tM : Male\n"
+        female     = "\tF : Female\n"
+        unclear    = "\tU : Unclear\n"
 
         clips = "\nClip Navigation/Playback Keys:\n\n"
         up         = "\tup            : previous clip\n"
@@ -1174,6 +1225,9 @@ class MainWindow:
                                 reg_switch+\
                                 mult_addr+\
                                 junk+\
+                                male+\
+                                female+\
+                                unclear+\
                                 clips+\
                                 up+
                                 left+\
@@ -1478,7 +1532,37 @@ class MainWindow:
             add_user_url = config["server-urls"]["add_user_url"]
             submit_labels_url = config["server-urls"]["submit_labels_url"]
 
-    def submit_classifications(self):
+    def submit_block(self):
+        # check that the current block is completed before submitting
+        block = self.current_block
+        unfinished_clips = []
+        for clip in block.clips:
+            if clip.clip_tier == "FAN" or clip.clip_tier == "MAN":
+                if not clip.classification:
+                    unfinished_clips.append(clip)
+                if not clip.gender_label:
+                    unfinished_clips.append(clip)
+
+        if not unfinished_clips:
+            submission = block.to_dict()
+            resp = requests.post(submit_labels_url, json=submission, allow_redirects=False)
+
+            if resp.status_code != 200:
+                showwarning("Bad Request", "Server: " + resp.content)
+                return
+
+            if resp.ok:
+                print "everything is ok"
+                self.cleanup_block_data(block)
+                block_index = self.clip_blocks.index(block)
+                del self.clip_blocks[block_index]
+        else:
+            showwarning("Incomplete Block", "You haven't classified all the FAN/MAN tiered clips within this block")
+            return
+
+        self.block_list.delete(0, END)
+        self.load_downloaded_blocks()
+    def submit_all_blocks(self):
         blocks = self.get_completed_blocks()
 
         if len(blocks[1]) > 0:
@@ -1503,6 +1587,7 @@ class MainWindow:
                 block_index = self.clip_blocks.index(block)
                 del self.clip_blocks[block_index]
 
+        self.block_list.delete(0, END)
         self.load_downloaded_blocks()
 
     def labels_to_json(self):
@@ -1528,6 +1613,9 @@ class MainWindow:
                 if clip.clip_tier == "FAN" or clip.clip_tier == "MAN":
                     if not clip.classification:
                         unfinished_clips.append(clip)
+                    if not clip.gender_label:
+                        unfinished_clips.append(clip)
+
             if len(unfinished_clips) > 0:
                 incomplete_blocks.append(block)
             else:
@@ -1539,11 +1627,11 @@ class MainWindow:
 
         self.previous_block_menu.delete(0, END)
         for index, block in enumerate(self.clip_blocks):
-            block_string = str(index)
+            block_string = "{} : {}".format(index, block.index)
             if block.old:
-                block_string += " - old"
+                block_string += "  [old]"
             else:
-                block_string += " - new"
+                block_string += "  [new]"
             self.previous_block_menu.insert(index, block_string)
 
     def load_previously_downl_blocks(self):
