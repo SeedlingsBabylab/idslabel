@@ -2,8 +2,9 @@
 
 Note: This is a work in progress.
 
-![IDSLabel](include/screenshot.png)
+![IDSLabel](include/main_screenshot.png)
 
+![IDSLabelInfo](include/labinfo_screenshot.png)
 
 ## requirements
 
@@ -98,30 +99,3 @@ have a symbol associated with them to signify they're part of the unit ( " ^-- "
 In the classification output, if clips are associated together as part of a multi-line tier, the value in the "multi-tier"
 column will be the timestamp of the parent line that they're associated to. In the example provided above, the line with
 the timestamp of 2662230_2662370 will be the parent to the following 2 lines.
-
-
-
-## status
-
-### implemented
-
-- parsing cha file and extracting Conversation blocks
-- chopping up associated audio file
- - each conversation block is chopped as a unit (upon loading)
- - each tier (except comments and *SIL) within a block is chopped into a new audio clip given its timestamp in the cha file
-- randomize the blocks and allow the user to load a random one for classification
-- list the clips within the currently loaded block, and allow the user to play the audio for a given clip.
-- allow the user to select a classification for the currently playing clip
- - cds
- - ads
- - child noises
- - register switch
- - multiple addressee
- - junk
-- export classifications to csv
-- check github if current IDSLabel is the latest version
-
-### not implemented yet
-
-- connect to server and checkout cha/audio file for labeling
-- lots of UI things (make it more convenient)
