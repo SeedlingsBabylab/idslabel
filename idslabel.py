@@ -30,6 +30,8 @@ lab_info_url = ""
 all_lab_info_url = ""
 add_user_url = ""
 submit_labels_url = ""
+get_labels_url = ""
+get_all_labels_url = ""
 
 
 class Block:
@@ -40,7 +42,7 @@ class Block:
         self.num_clips = None
         self.clips = []
         self.sliced = False
-        self.contains_fan_or_man = False
+        #self.contains_fan_or_man = False
         self.dont_share = False
         self.id = ""
         self.coder = None
@@ -62,7 +64,7 @@ class Block:
         block["lab-key"] = self.lab_key
         block["lab-name"] = self.lab_name
         block["id"] = self.id
-        block["fan-or-man"] = self.contains_fan_or_man
+        #block["fan-or-man"] = self.contains_fan_or_man
         block["dont-share"] = self.dont_share
         block["clan-file"] = self.clan_file
         block["block-index"] = self.index
@@ -367,8 +369,13 @@ class MainWindow:
         self.lab_info_user_box = None
         self.lab_info_user_work_box = None
         self.lab_info_user_past_work_box = None
+        self.lab_info_past_work_box = None
+        self.lab_info_past_work_info = None
         self.curr_user = None
         self.lab_data = None
+        self.past_work_item_data = []
+        self.curr_past_block = None
+        self.curr_lab_info_clip = None
         self.lab_users = []
 
 
@@ -1047,6 +1054,25 @@ class MainWindow:
         self.curr_clip_info.tag_configure("label", foreground="red")
         self.curr_clip_info.tag_configure("gender", foreground="#333ccc333")
 
+        self.curr_clip_info.tag_add("block_key", 1.0, 1.5)
+        self.curr_clip_info.tag_add("clip_key", 2.0, 2.4)
+        self.curr_clip_info.tag_add("tier_key", 3.0, 3.4)
+        self.curr_clip_info.tag_add("timestamp_key", 4.0, 4.9)
+        self.curr_clip_info.tag_add("clip_length_key", 5.0, 5.11)
+        self.curr_clip_info.tag_add("coder_key", 6.0, 6.5)
+        self.curr_clip_info.tag_add("clan_file_key", 7.0, 7.9)
+        self.curr_clip_info.tag_add("label_key", 10.6, 11.0)
+        self.curr_clip_info.tag_add("gender_key", 11.7, 12.0)
+
+        self.curr_clip_info.tag_configure("block_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("clip_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("tier_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("timestamp_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("clip_length_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("coder_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("clan_file_key", font=("System", "12", "bold"))
+
+
         self.curr_clip_info.configure(state="disabled")
 
     def next_clip(self):
@@ -1376,7 +1402,7 @@ class MainWindow:
     def get_lab_info(self):
         self.lab_info_page = Toplevel()
         self.lab_info_page.title("Lab Info")
-        self.lab_info_page.geometry("600x400")
+        self.lab_info_page.geometry("1040x400")
 
         users_label = Label(self.lab_info_page, text="Users")
         users_label.grid(row=0, column=0)
@@ -1387,16 +1413,34 @@ class MainWindow:
         work_item_label = Label(self.lab_info_page, text="Finished Work Items")
         work_item_label.grid(row=0, column=2)
 
+
         self.lab_info_user_box = Listbox(self.lab_info_page, width=15, height=20)
-        self.lab_info_user_box.grid(row=1, column=0)
+        self.lab_info_user_box.grid(row=1, column=0, rowspan=9)
         self.lab_info_user_box.bind('<<ListboxSelect>>', self.update_curr_user)
 
         self.lab_info_user_work_box = Listbox(self.lab_info_page, width=22, height=20)
-        self.lab_info_user_work_box.grid(row=1, column=1)
+        self.lab_info_user_work_box.grid(row=1, column=1, rowspan=9)
+
 
         self.lab_info_user_past_work_box = Listbox(self.lab_info_page, width=22, height=20)
-        self.lab_info_user_past_work_box.grid(row=1, column=2)
+        self.lab_info_user_past_work_box.grid(row=1, column=2, rowspan=9)
+        self.lab_info_user_past_work_box.bind('<<ListboxSelect>>', self.get_labels)
 
+        self.lab_info_past_work_box = Listbox(self.lab_info_page, width=10, height=20)
+        self.lab_info_past_work_box.grid(row=1, column=3, rowspan=9)
+        self.lab_info_past_work_box.bind('<<ListboxSelect>>', self.update_lab_info_curr_clip)
+
+        self.lab_info_past_work_info = Text(self.lab_info_page, width=38, height=20)
+        self.lab_info_past_work_info.grid(row=1, column=4, rowspan=9)
+
+        save_this_block_button = Button(self.lab_info_page, text="Save This Block", command=self.lab_info_save_this_block)
+        save_this_block_button.grid(row=0, column=5)
+
+        save_all_lab_blocks_button = Button(self.lab_info_page, text="Save Lab Blocks", command=self.lab_info_save_lab_blocks)
+        save_all_lab_blocks_button.grid(row=1, column=5, )
+
+        save_all_blocks_button = Button(self.lab_info_page, text="Save All Blocks", command=self.lab_info_save_all_blocks)
+        save_all_blocks_button.grid(row=2, column=5)
 
         payload = {"lab-key": self.lab_key}
 
@@ -1516,6 +1560,8 @@ class MainWindow:
         global all_lab_info_url
         global add_user_url
         global submit_labels_url
+        global get_labels_url
+        global get_all_labels_url
 
         showwarning("Config File", "Please choose a config.json file to load")
         config_path = tkFileDialog.askopenfilename()
@@ -1531,6 +1577,8 @@ class MainWindow:
             all_lab_info_url = config["server-urls"]["all_lab_info_url"]
             add_user_url = config["server-urls"]["add_user_url"]
             submit_labels_url = config["server-urls"]["submit_labels_url"]
+            get_labels_url = config["server-urls"]["get_labels_url"]
+            get_all_labels_url = config["server-urls"]["get_all_labels_url"]
 
     def submit_block(self):
         # check that the current block is completed before submitting
@@ -1687,6 +1735,124 @@ class MainWindow:
             clips_path = os.path.dirname(clip.audio_path)
         shutil.rmtree(clips_path)
 
+    def get_labels(self, evt):
+        box = evt.widget
+        index = int(box.curselection()[0])
+
+        work_item = box.get(index)
+        print work_item
+
+        if not lab_info_url:
+            self.parse_config()
+
+        payload = {"lab-key": self.lab_key,
+                   "item-id": work_item}
+
+        resp = requests.post(get_labels_url, json=payload, allow_redirects=False)
+
+        block_data = None
+        if resp.ok:
+            block_data = json.loads(resp.content)
+            print block_data
+            self.curr_past_block = self.json_to_block(block_data)
+            self.load_block_lab_info()
+        else:
+            showwarning("Bad Request", "Server: {}".format(resp.content))
+            print resp.content
+            return
+
+
+    def load_block_lab_info(self):
+
+        self.lab_info_past_work_box.delete(0, END)
+
+        for index, element in enumerate(self.curr_past_block.clips):
+            if element.multiline:
+                self.lab_info_past_work_box.insert(index, element.clip_tier + " ^--")
+                if element.clip_tier not in ["FAN", "MAN"]:
+                    self.lab_info_past_work_box.itemconfig(index, fg="grey")
+            else:
+                self.lab_info_past_work_box.insert(index, element.clip_tier)
+                if element.clip_tier not in ["FAN", "MAN"]:
+                    self.lab_info_past_work_box.itemconfig(index, fg="grey")
+
+        self.block_list.selection_clear(0, END)
+        self.block_list.selection_set(0)
+
+
+    def update_lab_info_curr_clip(self, evt):
+        box = evt.widget
+        index = int(box.curselection()[0])
+
+        self.curr_lab_info_clip = self.curr_past_block.clips[index]
+        work_item = box.get(index)
+        print work_item
+
+        self.lab_info_past_work_info.configure(state="normal")
+        self.lab_info_past_work_info.delete("1.0", END)
+
+        block       = "block:       {}\n".format(self.curr_lab_info_clip.block_index)
+        clip        = "clip:        {}\n".format(self.curr_lab_info_clip.clip_index)
+        tier        = "tier:        {}\n".format(self.curr_lab_info_clip.clip_tier)
+
+        time        = "timestamp:   {}\n".format(self.curr_lab_info_clip.timestamp)
+        clip_length = "clip length: {}\n".format(self.curr_lab_info_clip.offset_time)
+        coder       = "coder:       {}\n".format(self.curr_lab_info_clip.coder)
+        clanfile    = "clan file:   {}\n\n\n".format(self.curr_lab_info_clip.clan_file)
+        label       = "label:       {}\n".format(self.curr_lab_info_clip.classification)
+        gender      = "gender:      {}\n".format(self.curr_lab_info_clip.gender_label)
+
+        self.lab_info_past_work_info.insert('1.0',
+                                            block +
+                                            clip +
+                                            tier +
+                                            time +
+                                            clip_length +
+                                            coder +
+                                            clanfile +
+                                            label +
+                                            gender)
+
+        self.lab_info_past_work_info.tag_add("label", 10.6, 11.0)
+        self.lab_info_past_work_info.tag_add("gender", 11.7, 12.0)
+        self.lab_info_past_work_info.tag_configure("label", foreground="red")
+        self.lab_info_past_work_info.tag_configure("gender", foreground="#333ccc333")
+
+        self.lab_info_past_work_info.configure(state="disabled")
+
+    def lab_info_save_this_block(self):
+        print
+
+    def lab_info_save_lab_blocks(self):
+        print
+
+    def lab_info_save_all_blocks(self):
+        print
+    def json_to_block(self, block_json):
+
+        block = Block(block_json["block-index"], block_json["clan-file"])
+        block.dont_share = block_json["dont-share"]
+
+        for clip in block_json["clips"]:
+            block.clips.append(self.json_to_clip(clip, block.index, block.clan_file))
+
+        return block
+
+    def json_to_clip(self, clip_json, block_index, clan_file):
+
+        clip = Clip("", block_index, clip_json["clip-index"])
+
+        clip.clan_file = clan_file
+        clip.clip_tier = clip_json["clip-tier"]
+        clip.start_time = clip_json["start-time"]
+        clip.offset_time = clip_json["offset-time"]
+        clip.timestamp = clip_json["timestamp"]
+        clip.classification = clip_json["classification"]
+        clip.gender_label = clip_json["gender-label"]
+        clip.label_date = clip_json["label-date"]
+        clip.coder = clip_json["coder"]
+
+        return clip
 if __name__ == "__main__":
 
     root = Tk()
