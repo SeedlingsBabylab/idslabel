@@ -1027,27 +1027,49 @@ class MainWindow:
         self.curr_clip_info.configure(state="normal")
         self.curr_clip_info.delete("1.0", END)
 
-        block       = "block:       {}\n".format(self.current_clip.block_index)
-        clip        = "clip:        {}\n".format(self.current_clip.clip_index)
-        tier        = "tier:        {}\n".format(self.current_clip.clip_tier)
+        block       = "block:        {}\n".format(self.current_clip.block_index)
+        clip        = "clip:         {}\n".format(self.current_clip.clip_index)
+        tier        = "tier:         {}\n".format(self.current_clip.clip_tier)
 
-        time        = "timestamp:   {}\n".format(self.current_clip.timestamp)
-        clip_length = "clip length: {}\n".format(self.current_clip.offset_time)
-        coder       = "coder:       {}\n".format(self.current_clip.coder)
-        clanfile    = "clan file:   {}\n\n\n".format(self.current_clip.clan_file)
-        label       = "label:       {}\n".format(self.current_clip.classification)
-        gender      = "gender:      {}\n".format(self.current_clip.gender_label)
+        time        = "timestamp:    {}\n".format(self.current_clip.timestamp)
+        clip_length = "clip length:  {}\n".format(self.current_clip.offset_time)
+        coder       = "coder:        {}\n".format(self.current_clip.coder)
+        clanfile    = "clan file:    {}\n\n\n".format(self.current_clip.clan_file)
+        label       = "label:        {}\n".format(self.current_clip.classification)
+        gender      = "gender:       {}\n".format(self.current_clip.gender_label)
 
-        self.curr_clip_info.insert('1.0',
-                                    block+\
-                                    clip+\
-                                    tier+\
-                                    time+\
-                                    clip_length+\
-                                    coder+\
-                                    clanfile+\
-                                    label+\
-                                    gender)
+        info_string = "{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n\n\n{}       {}\n{}   {}\n"\
+                        .format("block:",
+                                str(self.current_clip.block_index),
+                                "clip:",
+                                str(self.current_clip.clip_index),
+                                "tier:",
+                                str(self.current_clip.clip_tier),
+                                "timestamp:",
+                                str(self.current_clip.timestamp),
+                                "clip length:",
+                                str(self.current_clip.offset_time),
+                                "clan file:",
+                                str(self.current_clip.clan_file),
+                                "coder:",
+                                str(self.current_clip.coder),
+                                "label:",
+                                str(self.current_clip.classification),
+                                "gender:",
+                                str(self.current_clip.gender_label))
+
+        # self.curr_clip_info.insert('1.0',
+        #                             block+\
+        #                             clip+\
+        #                             tier+\
+        #                             time+\
+        #                             clip_length+\
+        #                             coder+\
+        #                             clanfile+\
+        #                             label+\
+        #                             gender)
+
+        self.curr_clip_info.insert('1.0', info_string)
 
         self.curr_clip_info.tag_add("label", 10.6, 11.0)
         self.curr_clip_info.tag_add("gender", 11.7, 12.0)
@@ -1059,10 +1081,20 @@ class MainWindow:
         self.curr_clip_info.tag_add("tier_key", 3.0, 3.4)
         self.curr_clip_info.tag_add("timestamp_key", 4.0, 4.9)
         self.curr_clip_info.tag_add("clip_length_key", 5.0, 5.11)
-        self.curr_clip_info.tag_add("coder_key", 6.0, 6.5)
-        self.curr_clip_info.tag_add("clan_file_key", 7.0, 7.9)
-        self.curr_clip_info.tag_add("label_key", 10.6, 11.0)
-        self.curr_clip_info.tag_add("gender_key", 11.7, 12.0)
+        self.curr_clip_info.tag_add("clan_file_key", 6.0, 6.9)
+        self.curr_clip_info.tag_add("coder_key", 7.0, 7.6)
+        self.curr_clip_info.tag_add("label_key", 10.0, 10.5)
+        self.curr_clip_info.tag_add("gender_key", 11.0, 11.6)
+
+        self.curr_clip_info.tag_add("block_value", 1.5, 2.0)
+        self.curr_clip_info.tag_add("clip_value", 2.4, 3.0)
+        self.curr_clip_info.tag_add("tier_value", 3.4, 4.0)
+        self.curr_clip_info.tag_add("timestamp_value", 4.9, 5.0)
+        self.curr_clip_info.tag_add("clip_length_value", 5.11, 6.0)
+        self.curr_clip_info.tag_add("coder_value", 7.5, 8.0)
+        self.curr_clip_info.tag_add("clan_file_value", 6.9, 7.0)
+        self.curr_clip_info.tag_add("label_value", 10.5, 11.0)
+        self.curr_clip_info.tag_add("gender_value", 11.6, 12.0)
 
         self.curr_clip_info.tag_configure("block_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("clip_key", font=("System", "12", "bold"))
@@ -1071,7 +1103,18 @@ class MainWindow:
         self.curr_clip_info.tag_configure("clip_length_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("coder_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("clan_file_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("label_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("gender_key", font=("System", "12", "bold"))
 
+        self.curr_clip_info.tag_configure("block_value", font=("System", "12"))
+        self.curr_clip_info.tag_configure("clip_value", font=("System", "12"))
+        self.curr_clip_info.tag_configure("tier_value", font=("System", "12"))
+        self.curr_clip_info.tag_configure("timestamp_value", font=("System", "12"))
+        self.curr_clip_info.tag_configure("clip_length_value", font=("System", "12"))
+        self.curr_clip_info.tag_configure("coder_value", font=("System", "12"))
+        self.curr_clip_info.tag_configure("clan_file_value", font=("System", "12"))
+        self.curr_clip_info.tag_configure("label_value", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("gender_value", font=("System", "12", "bold"))
 
         self.curr_clip_info.configure(state="disabled")
 
@@ -1170,7 +1213,7 @@ class MainWindow:
         with open(self.classification_output, "wb") as output:
             writer = csv.writer(output)
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "multi-tier-parent", "dont_share"])
+                             "timestamp", "clip", "tier", "label", "gender", "dont_share"])
 
             block = self.current_block
             dont_share = False
@@ -1179,15 +1222,15 @@ class MainWindow:
 
             multitier_parent = None
             for clip in block.clips:
-                if clip.multiline:
-                    multitier_parent = clip.multi_tier_parent
-                else:
-                    multitier_parent = "N"
+                # if clip.multiline:
+                #     multitier_parent = clip.multi_tier_parent
+                # else:
+                #     multitier_parent = "N"
 
                 writer.writerow([clip.label_date, clip.coder, clip.clan_file,
                                  clip.parent_audio_path, clip.block_index,
                                  clip.timestamp, clip.clip_index,clip.clip_tier,
-                                 clip.classification, multitier_parent, dont_share])
+                                 clip.classification, clip.gender_label, dont_share])
 
     def blocks_to_csv(self):
 
@@ -1791,37 +1834,121 @@ class MainWindow:
         self.lab_info_past_work_info.configure(state="normal")
         self.lab_info_past_work_info.delete("1.0", END)
 
-        block       = "block:       {}\n".format(self.curr_lab_info_clip.block_index)
-        clip        = "clip:        {}\n".format(self.curr_lab_info_clip.clip_index)
-        tier        = "tier:        {}\n".format(self.curr_lab_info_clip.clip_tier)
+        # block       = "block:       {}\n".format(self.curr_lab_info_clip.block_index)
+        # clip        = "clip:        {}\n".format(self.curr_lab_info_clip.clip_index)
+        # tier        = "tier:        {}\n".format(self.curr_lab_info_clip.clip_tier)
+        #
+        # time        = "timestamp:   {}\n".format(self.curr_lab_info_clip.timestamp)
+        # clip_length = "clip length: {}\n".format(self.curr_lab_info_clip.offset_time)
+        # coder       = "coder:       {}\n".format(self.curr_lab_info_clip.coder)
+        # clanfile    = "clan file:   {}\n\n\n".format(self.curr_lab_info_clip.clan_file)
+        # label       = "label:       {}\n".format(self.curr_lab_info_clip.classification)
+        # gender      = "gender:      {}\n".format(self.curr_lab_info_clip.gender_label)
+        #
+        # self.lab_info_past_work_info.insert('1.0',
+        #                                     block +
+        #                                     clip +
+        #                                     tier +
+        #                                     time +
+        #                                     clip_length +
+        #                                     coder +
+        #                                     clanfile +
+        #                                     label +
+        #                                     gender)
 
-        time        = "timestamp:   {}\n".format(self.curr_lab_info_clip.timestamp)
-        clip_length = "clip length: {}\n".format(self.curr_lab_info_clip.offset_time)
-        coder       = "coder:       {}\n".format(self.curr_lab_info_clip.coder)
-        clanfile    = "clan file:   {}\n\n\n".format(self.curr_lab_info_clip.clan_file)
-        label       = "label:       {}\n".format(self.curr_lab_info_clip.classification)
-        gender      = "gender:      {}\n".format(self.curr_lab_info_clip.gender_label)
+        info_string = "{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n\n\n{}       {}\n{}   {}\n" \
+            .format("block:",
+                    str(self.curr_lab_info_clip.block_index),
+                    "clip:",
+                    str(self.curr_lab_info_clip.clip_index),
+                    "tier:",
+                    str(self.curr_lab_info_clip.clip_tier),
+                    "timestamp:",
+                    str(self.curr_lab_info_clip.timestamp),
+                    "clip length:",
+                    str(self.curr_lab_info_clip.offset_time),
+                    "clan file:",
+                    str(self.curr_lab_info_clip.clan_file),
+                    "coder:",
+                    str(self.curr_lab_info_clip.coder),
+                    "label:",
+                    str(self.curr_lab_info_clip.classification),
+                    "gender:",
+                    str(self.curr_lab_info_clip.gender_label))
 
-        self.lab_info_past_work_info.insert('1.0',
-                                            block +
-                                            clip +
-                                            tier +
-                                            time +
-                                            clip_length +
-                                            coder +
-                                            clanfile +
-                                            label +
-                                            gender)
+        self.lab_info_past_work_info.insert('1.0', info_string)
 
         self.lab_info_past_work_info.tag_add("label", 10.6, 11.0)
         self.lab_info_past_work_info.tag_add("gender", 11.7, 12.0)
         self.lab_info_past_work_info.tag_configure("label", foreground="red")
         self.lab_info_past_work_info.tag_configure("gender", foreground="#333ccc333")
 
+        self.lab_info_past_work_info.tag_add("block_key", 1.0, 1.5)
+        self.lab_info_past_work_info.tag_add("clip_key", 2.0, 2.4)
+        self.lab_info_past_work_info.tag_add("tier_key", 3.0, 3.4)
+        self.lab_info_past_work_info.tag_add("timestamp_key", 4.0, 4.9)
+        self.lab_info_past_work_info.tag_add("clip_length_key", 5.0, 5.11)
+        self.lab_info_past_work_info.tag_add("clan_file_key", 6.0, 6.9)
+        self.lab_info_past_work_info.tag_add("coder_key", 7.0, 7.6)
+        self.lab_info_past_work_info.tag_add("label_key", 10.0, 10.5)
+        self.lab_info_past_work_info.tag_add("gender_key", 11.0, 11.6)
+
+        self.lab_info_past_work_info.tag_add("block_value", 1.5, 2.0)
+        self.lab_info_past_work_info.tag_add("clip_value", 2.4, 3.0)
+        self.lab_info_past_work_info.tag_add("tier_value", 3.4, 4.0)
+        self.lab_info_past_work_info.tag_add("timestamp_value", 4.9, 5.0)
+        self.lab_info_past_work_info.tag_add("clip_length_value", 5.11, 6.0)
+        self.lab_info_past_work_info.tag_add("coder_value", 7.5, 8.0)
+        self.lab_info_past_work_info.tag_add("clan_file_value", 6.9, 7.0)
+        self.lab_info_past_work_info.tag_add("label_value", 10.5, 11.0)
+        self.lab_info_past_work_info.tag_add("gender_value", 11.6, 12.0)
+
+        self.lab_info_past_work_info.tag_configure("block_key", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("clip_key", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("tier_key", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("timestamp_key", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("clip_length_key", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("coder_key", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("clan_file_key", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("label_key", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("gender_key", font=("System", "12", "bold"))
+
+        self.lab_info_past_work_info.tag_configure("block_value", font=("System", "12"))
+        self.lab_info_past_work_info.tag_configure("clip_value", font=("System", "12"))
+        self.lab_info_past_work_info.tag_configure("tier_value", font=("System", "12"))
+        self.lab_info_past_work_info.tag_configure("timestamp_value", font=("System", "12"))
+        self.lab_info_past_work_info.tag_configure("clip_length_value", font=("System", "12"))
+        self.lab_info_past_work_info.tag_configure("coder_value", font=("System", "12"))
+        self.lab_info_past_work_info.tag_configure("clan_file_value", font=("System", "12"))
+        self.lab_info_past_work_info.tag_configure("label_value", font=("System", "12", "bold"))
+        self.lab_info_past_work_info.tag_configure("gender_value", font=("System", "12", "bold"))
+
         self.lab_info_past_work_info.configure(state="disabled")
 
     def lab_info_save_this_block(self):
-        print
+        output_path = tkFileDialog.asksaveasfilename()
+        with open(output_path, "wb") as out:
+            writer = csv.writer(out)
+
+            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
+                             "timestamp", "clip", "tier", "label", "gender", "dont_share"])
+
+            block = self.curr_past_block
+            dont_share = False
+            if block.dont_share:
+                dont_share = True
+
+            multitier_parent = None
+            for clip in block.clips:
+                # if clip.multiline:
+                #     multitier_parent = clip.multi_tier_parent
+                # else:
+                #     multitier_parent = "N"
+
+                writer.writerow([clip.label_date, clip.coder, clip.clan_file,
+                                 clip.parent_audio_path, clip.block_index,
+                                 clip.timestamp, clip.clip_index, clip.clip_tier,
+                                 clip.classification, clip.gender_label, dont_share])
 
     def lab_info_save_lab_blocks(self):
         print
