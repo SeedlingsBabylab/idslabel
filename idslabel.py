@@ -1954,13 +1954,7 @@ class MainWindow:
             if block.dont_share:
                 dont_share = True
 
-            multitier_parent = None
             for clip in block.clips:
-                # if clip.multiline:
-                #     multitier_parent = clip.multi_tier_parent
-                # else:
-                #     multitier_parent = "N"
-
                 writer.writerow([clip.label_date, clip.coder, clip.clan_file,
                                  clip.parent_audio_path, clip.block_index,
                                  clip.timestamp, clip.clip_index, clip.clip_tier,
@@ -1970,7 +1964,49 @@ class MainWindow:
         print
 
     def lab_info_save_all_blocks(self):
-        print
+        output_path = tkFileDialog.asksaveasfilename()
+
+        if not self.lab_key:
+            showwarning("Load Config", "You need to load the config.json first")
+            return
+
+        payload = {"lab-key": self.lab_key}
+
+        resp = requests.post(get_all_labels_url, json=payload, allow_redirects=False)
+
+        block_data = None
+        if resp.ok:
+            block_data = json.loads(resp.content)
+
+        print block_data
+        blocks = []
+        for block in block_data["blocks"]:
+            blocks.append(self.json_to_block(block))
+
+        with open(output_path, "wb") as out:
+            writer = csv.writer(out)
+
+            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
+                             "timestamp", "clip", "tier", "label", "gender", "dont_share"])
+
+
+            for block in blocks:
+                dont_share = False
+                if block.dont_share:
+                    dont_share = True
+
+                for clip in block.clips:
+                    # if clip.multiline:
+                    #     multitier_parent = clip.multi_tier_parent
+                    # else:
+                    #     multitier_parent = "N"
+
+                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
+                                     clip.parent_audio_path, clip.block_index,
+                                     clip.timestamp, clip.clip_index, clip.clip_tier,
+                                     clip.classification, clip.gender_label, dont_share])
+
+
 
     def json_to_block(self, block_json):
 
