@@ -31,7 +31,9 @@ all_lab_info_url = ""
 add_user_url = ""
 submit_labels_url = ""
 get_labels_url = ""
+get_lab_labels_url = ""
 get_all_labels_url = ""
+send_back_blocks_url = ""
 
 
 class Block:
@@ -178,6 +180,7 @@ class MainWindow:
         self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
         self.filemenu.add_command(label="Submit Block", command=self.submit_block)
         self.filemenu.add_command(label="Submit All Blocks", command=self.submit_all_blocks)
+        self.filemenu.add_command(label="Send Blocks Back", command=self.send_blocks_back)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
@@ -242,6 +245,10 @@ class MainWindow:
                                         text="Get Blocks",
                                         command=self.get_blocks)
 
+        self.send_block_back_button = Button(self.main_frame,
+                                            text="Send Blocks Back",
+                                            command=self.send_blocks_back)
+
         #self.load_clan_button.grid(row=0, column=0)
         #self.load_audio_button.grid(row=0, column=1)
         self.get_blocks_button.grid(row=0, column=2)
@@ -253,6 +260,8 @@ class MainWindow:
         self.output_classifications_button.grid(row=5, column=2)
         self.submit_labels_to_server_button.grid(row=6, column=2)
         self.submit_all_labels_to_server_button.grid(row=7, column=2)
+        self.send_block_back_button.grid(row=7, column=4)
+
         #self.load_classifications_button.grid(row=8, column=2, rowspan=2)
 
         self.block_list = Listbox(self.main_frame, width=15, height=25)
@@ -391,6 +400,9 @@ class MainWindow:
         #self.parse_config()
 
         self.prev_downl_blocks = []
+
+        self.send_blocks_back_page = None
+        self.send_back_block_list = None
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -1450,10 +1462,10 @@ class MainWindow:
         users_label = Label(self.lab_info_page, text="Users")
         users_label.grid(row=0, column=0)
 
-        work_item_label = Label(self.lab_info_page, text="Active Work Items")
+        work_item_label = Label(self.lab_info_page, text="Active Blocks")
         work_item_label.grid(row=0, column=1)
 
-        work_item_label = Label(self.lab_info_page, text="Finished Work Items")
+        work_item_label = Label(self.lab_info_page, text="Finished Blocks")
         work_item_label.grid(row=0, column=2)
 
 
@@ -1604,7 +1616,9 @@ class MainWindow:
         global add_user_url
         global submit_labels_url
         global get_labels_url
+        global get_labels_url
         global get_all_labels_url
+        global send_back_blocks_url
 
         showwarning("Config File", "Please choose a config.json file to load")
         config_path = tkFileDialog.askopenfilename()
@@ -1621,7 +1635,9 @@ class MainWindow:
             add_user_url = config["server-urls"]["add_user_url"]
             submit_labels_url = config["server-urls"]["submit_labels_url"]
             get_labels_url = config["server-urls"]["get_labels_url"]
+            get_lab_labels_url = config["server-urls"]["get_lab_labels_url"]
             get_all_labels_url = config["server-urls"]["get_all_labels_url"]
+            send_back_blocks_url = config["server-urls"]["send_back_blocks_url"]
 
     def submit_block(self):
         # check that the current block is completed before submitting
@@ -1653,6 +1669,7 @@ class MainWindow:
 
         self.block_list.delete(0, END)
         self.load_downloaded_blocks()
+
     def submit_all_blocks(self):
         blocks = self.get_completed_blocks()
 
@@ -1718,7 +1735,7 @@ class MainWindow:
 
         self.previous_block_menu.delete(0, END)
         for index, block in enumerate(self.clip_blocks):
-            block_string = "{} : {}".format(index, block.index)
+            block_string = "{} : {}".format(index+1, block.index)
             if block.old:
                 block_string += "  [old]"
             else:
@@ -1803,7 +1820,6 @@ class MainWindow:
             showwarning("Bad Request", "Server: {}".format(resp.content))
             print resp.content
             return
-
 
     def load_block_lab_info(self):
 
@@ -1955,6 +1971,7 @@ class MainWindow:
 
     def lab_info_save_all_blocks(self):
         print
+
     def json_to_block(self, block_json):
 
         block = Block(block_json["block-index"], block_json["clan-file"])
@@ -1980,6 +1997,72 @@ class MainWindow:
         clip.coder = clip_json["coder"]
 
         return clip
+
+    def send_blocks_back(self):
+        self.send_blocks_back_page = Toplevel()
+        self.send_blocks_back_page.title("Send Blocks Back")
+        self.send_blocks_back_page.geometry("400x400")
+
+        self.send_back_block_list = Listbox(self.send_blocks_back_page, selectmode=MULTIPLE, width=10, height=15)
+        self.send_back_block_list.grid(row=1, column=1)
+
+        send_back_button = Button(self.send_blocks_back_page, text="Send Back", command=self.send_back)
+        send_back_button.grid(row=2, column=1)
+
+        self.send_back_block_list.delete(0, END)
+        for index, block in enumerate(self.clip_blocks):
+            block_string = "{} : {}".format(index+1, block.index)
+            if block.old:
+                block_string += "  [old]"
+            else:
+                block_string += "  [new]"
+            self.send_back_block_list.insert(index, block_string)
+
+    def send_back(self):
+
+        selections = self.send_back_block_list.curselection()
+        selection_ids = []
+        selection_blocks = []
+
+        for selection in selections:
+            block = self.clip_blocks[selection]
+            selection_ids.append(block.id)
+            selection_blocks.append(block)
+
+        name = self.codername_entry.get()
+        if name == "CODER_NAME":
+            showwarning("Set Coder Name", "You need to set your coder name first")
+            return
+
+        payload = {"lab-key": self.lab_key,
+                   "lab-name": self.lab_name,
+                   "username": name,
+                   "blocks": []
+                   }
+
+        for block in selection_ids:
+            payload["blocks"].append(block)
+
+        resp = requests.post(send_back_blocks_url, json=payload, allow_redirects=False)
+
+        print payload
+
+        for block in selection_blocks:
+            self.cleanup_block_data(block)
+            block_index = self.clip_blocks.index(block)
+            del self.clip_blocks[block_index]
+
+        self.send_back_block_list.delete(0, END)
+        for index, block in enumerate(self.clip_blocks):
+            block_string = "{} : {}".format(index+1, block.index)
+            if block.old:
+                block_string += "  [old]"
+            else:
+                block_string += "  [new]"
+            self.send_back_block_list.insert(index, block_string)
+
+        self.load_downloaded_blocks()
+
 if __name__ == "__main__":
 
     root = Tk()
