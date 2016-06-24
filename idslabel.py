@@ -1071,17 +1071,6 @@ class MainWindow:
         self.curr_clip_info.configure(state="normal")
         self.curr_clip_info.delete("1.0", END)
 
-        block       = "block:        {}\n".format(self.current_clip.block_index)
-        clip        = "clip:         {}\n".format(self.current_clip.clip_index)
-        tier        = "tier:         {}\n".format(self.current_clip.clip_tier)
-
-        time        = "timestamp:    {}\n".format(self.current_clip.timestamp)
-        clip_length = "clip length:  {}\n".format(self.current_clip.offset_time)
-        coder       = "coder:        {}\n".format(self.current_clip.coder)
-        clanfile    = "clan file:    {}\n\n\n".format(self.current_clip.clan_file)
-        label       = "label:        {}\n".format(self.current_clip.classification)
-        gender      = "gender:       {}\n".format(self.current_clip.gender_label)
-
         info_string = "{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n\n\n{}       {}\n{}   {}\n"\
                         .format("block:",
                                 str(self.current_clip.block_index),
@@ -1691,6 +1680,7 @@ class MainWindow:
 
         self.block_list.delete(0, END)
         self.load_downloaded_blocks()
+        self.load_downloaded_block(0)
 
     def submit_block_and_save(self):
         if not self.session_output_file:
@@ -1713,6 +1703,8 @@ class MainWindow:
         else:
             showwarning("Incomplete Block", "You haven't classified all the FAN/MAN tiered clips within this block")
             return
+
+
 
     def submit_all_blocks(self):
         blocks = self.get_completed_blocks()
@@ -1741,6 +1733,7 @@ class MainWindow:
 
         self.block_list.delete(0, END)
         self.load_downloaded_blocks()
+        self.load_downloaded_block(0)
 
     def labels_to_json(self):
 
