@@ -51,6 +51,7 @@ class Block:
         self.lab_key = None
         self.lab_name = None
         self.old = False
+        self.length = 0
 
     def sort_clips(self):
         self.clips.sort(key=lambda x: x.clip_index)
@@ -355,7 +356,7 @@ class MainWindow:
         self.loaded_classification_file = []
 
         self.paths_text = None
-        self.print_paths()
+        #self.print_paths()
 
         self.reload_multiline_parents = []
 
@@ -487,7 +488,7 @@ class MainWindow:
         if self.prev_downl_blocks:
             self.clip_blocks.extend(self.prev_downl_blocks)
         self.load_downloaded_blocks()
-        self.print_paths()
+        #self.print_paths()
         self.main_frame.focus_set()
 
     def load_clan(self):
@@ -500,11 +501,11 @@ class MainWindow:
 
         showwarning("Clips", "Please choose a folder to store audio clips")
         self.set_clip_path()
-        self.print_paths()
+        #self.print_paths()
         if not self.classification_output:
             showwarning("Output", "Please create a classification output file (.csv)")
             self.set_classification_output()
-            self.print_paths()
+            #self.print_paths()
 
         showwarning("Note", "Remember to write your name in the 'CODER_NAME' box before starting")
 
@@ -513,7 +514,7 @@ class MainWindow:
         if not os.path.isfile(self.classification_output):
             self.output_classifications()
 
-        self.print_paths()
+        #self.print_paths()
 
     def find_clip_and_update(self, entry):
         block_index = int(entry[4])-1
@@ -556,7 +557,7 @@ class MainWindow:
 
     def load_audio(self):
         self.audio_file = tkFileDialog.askopenfilename()
-        self.print_paths()
+        #self.print_paths()
 
     def play_clip(self):
         current_clip = self.block_list.curselection()
@@ -815,6 +816,16 @@ class MainWindow:
 
         block.id = block.clan_file + ":::" + str(block.index)
 
+        block_length = 0
+        for clip in block.clips:
+            time_split = clip.timestamp.split("_")
+            time_split = [int(x) for x in time_split]
+            block_length += time_split[1] - time_split[0]
+
+        time = self.ms_to_hhmmss([0, block_length])
+
+        block.length = time[2]
+
         return block
 
     def create_block_from_clips(self, path_to_zip):
@@ -853,6 +864,16 @@ class MainWindow:
         block.sort_clips()
 
         block.id = block.clan_file + ":::" + str(block.index)
+
+        block_length = 0
+        for clip in block.clips:
+            time_split = clip.timestamp.split("_")
+            time_split = [int(x) for x in time_split]
+            block_length += time_split[1] - time_split[0]
+
+        time = self.ms_to_hhmmss([0, block_length])
+
+        block.length = time[2]
 
         return block
 
@@ -1023,7 +1044,7 @@ class MainWindow:
             # else:
             self.block_list.insert(index, element.clip_tier)
             if element.clip_tier not in ["FAN", "MAN"]:
-                self.block_list.itemconfig(index, fg="grey")
+                self.block_list.itemconfig(index, fg="grey", selectforeground="grey")
 
         self.coded_block_label = Label(self.main_frame, text="block #{}".format(self.current_block_index + 1))
         self.coded_block_label.grid(row=26, column=3)
@@ -1061,7 +1082,7 @@ class MainWindow:
         label       = "label:        {}\n".format(self.current_clip.classification)
         gender      = "gender:       {}\n".format(self.current_clip.gender_label)
 
-        info_string = "{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n\n\n{}       {}\n{}   {}\n"\
+        info_string = "{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n\n\n{}       {}\n{}   {}\n"\
                         .format("block:",
                                 str(self.current_clip.block_index),
                                 "clip:",
@@ -1072,6 +1093,8 @@ class MainWindow:
                                 str(self.current_clip.timestamp),
                                 "clip length:",
                                 str(self.current_clip.offset_time),
+                                "block length:",
+                                str(self.current_block.length),
                                 "clan file:",
                                 str(self.current_clip.clan_file),
                                 "coder:",
@@ -1081,21 +1104,10 @@ class MainWindow:
                                 "gender:",
                                 str(self.current_clip.gender_label))
 
-        # self.curr_clip_info.insert('1.0',
-        #                             block+\
-        #                             clip+\
-        #                             tier+\
-        #                             time+\
-        #                             clip_length+\
-        #                             coder+\
-        #                             clanfile+\
-        #                             label+\
-        #                             gender)
-
         self.curr_clip_info.insert('1.0', info_string)
 
-        self.curr_clip_info.tag_add("label", 10.6, 11.0)
-        self.curr_clip_info.tag_add("gender", 11.7, 12.0)
+        self.curr_clip_info.tag_add("label", 11.6, 12.0)
+        self.curr_clip_info.tag_add("gender", 12.7, 13.0)
         self.curr_clip_info.tag_configure("label", foreground="red")
         self.curr_clip_info.tag_configure("gender", foreground="#333ccc333")
 
@@ -1104,26 +1116,29 @@ class MainWindow:
         self.curr_clip_info.tag_add("tier_key", 3.0, 3.4)
         self.curr_clip_info.tag_add("timestamp_key", 4.0, 4.9)
         self.curr_clip_info.tag_add("clip_length_key", 5.0, 5.11)
-        self.curr_clip_info.tag_add("clan_file_key", 6.0, 6.9)
-        self.curr_clip_info.tag_add("coder_key", 7.0, 7.6)
-        self.curr_clip_info.tag_add("label_key", 10.0, 10.5)
-        self.curr_clip_info.tag_add("gender_key", 11.0, 11.6)
+        self.curr_clip_info.tag_add("block_length_key", 6.0, 6.13)
+        self.curr_clip_info.tag_add("clan_file_key", 7.0, 7.9)
+        self.curr_clip_info.tag_add("coder_key", 8.0, 8.6)
+        self.curr_clip_info.tag_add("label_key", 11.0, 11.5)
+        self.curr_clip_info.tag_add("gender_key", 12.0, 12.6)
 
         self.curr_clip_info.tag_add("block_value", 1.5, 2.0)
         self.curr_clip_info.tag_add("clip_value", 2.4, 3.0)
         self.curr_clip_info.tag_add("tier_value", 3.4, 4.0)
         self.curr_clip_info.tag_add("timestamp_value", 4.9, 5.0)
         self.curr_clip_info.tag_add("clip_length_value", 5.11, 6.0)
-        self.curr_clip_info.tag_add("coder_value", 7.5, 8.0)
-        self.curr_clip_info.tag_add("clan_file_value", 6.9, 7.0)
-        self.curr_clip_info.tag_add("label_value", 10.5, 11.0)
-        self.curr_clip_info.tag_add("gender_value", 11.6, 12.0)
+        self.curr_clip_info.tag_add("block_length_value", 6.14, 7.0)
+        self.curr_clip_info.tag_add("coder_value", 8.5, 9.0)
+        self.curr_clip_info.tag_add("clan_file_value", 7.9, 8.0)
+        self.curr_clip_info.tag_add("label_value", 11.5, 12.0)
+        self.curr_clip_info.tag_add("gender_value", 12.6, 13.0)
 
         self.curr_clip_info.tag_configure("block_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("clip_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("tier_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("timestamp_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("clip_length_key", font=("System", "12", "bold"))
+        self.curr_clip_info.tag_configure("block_length_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("coder_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("clan_file_key", font=("System", "12", "bold"))
         self.curr_clip_info.tag_configure("label_key", font=("System", "12", "bold"))
@@ -1134,6 +1149,7 @@ class MainWindow:
         self.curr_clip_info.tag_configure("tier_value", font=("System", "12"))
         self.curr_clip_info.tag_configure("timestamp_value", font=("System", "12"))
         self.curr_clip_info.tag_configure("clip_length_value", font=("System", "12"))
+        self.curr_clip_info.tag_configure("block_length_value", font=("System", "12"))
         self.curr_clip_info.tag_configure("coder_value", font=("System", "12"))
         self.curr_clip_info.tag_configure("clan_file_value", font=("System", "12"))
         self.curr_clip_info.tag_configure("label_value", font=("System", "12", "bold"))
@@ -1215,14 +1231,14 @@ class MainWindow:
         self.clip_directory = tkFileDialog.askdirectory()
         self.prev_downl_blocks = self.load_previously_downl_blocks()
         self.clip_blocks.extend(self.prev_downl_blocks)
-        self.print_paths()
+        #self.print_paths()
 
     def save_as_classifications(self, event):
         self.set_classification_output()
 
     def set_classification_output(self):
         self.classification_output = tkFileDialog.asksaveasfilename()
-        self.print_paths()
+        #self.print_paths()
 
     def save_classifications(self, event):
         self.output_classifications()
@@ -1406,8 +1422,8 @@ class MainWindow:
             clips_dir =       "clips  directory:   {}\n".format("N/A")
 
         self.paths_text.insert("1.0",
-                               audio_filepath+\
-                               output_filepath+\
+                               #audio_filepath+\
+                               #output_filepath+\
                                clips_dir)
 
         self.paths_text.configure(state="disabled")
