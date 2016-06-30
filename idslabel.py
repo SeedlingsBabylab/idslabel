@@ -22,7 +22,7 @@ import tkSimpleDialog
 from tkMessageBox import showwarning
 
 
-version = "0.0.7"
+version = "0.0.8"
 
 
 get_block_url = ""
@@ -446,6 +446,9 @@ class MainWindow:
                 return
 
             if self.current_clip.clip_tier not in ["FAN", "MAN"]:
+                return
+
+            if self.current_clip.classification == "JUNK":
                 return
             self.current_clip.label_date = time.strftime("%m/%d/%Y")
             self.current_clip.coder = self.codername_entry.get()
@@ -1689,7 +1692,10 @@ class MainWindow:
                 if not clip.classification:
                     unfinished_clips.append(clip)
                 if not clip.gender_label:
-                    unfinished_clips.append(clip)
+                    if clip.classification == "JUNK":
+                        continue
+                    else:
+                        unfinished_clips.append(clip)
 
         if not unfinished_clips:
             submission = block.to_dict()
@@ -1717,6 +1723,12 @@ class MainWindow:
             showwarning("Set Output File", "Please choose a csv file to save this session's blocks to")
             self.session_output_file = tkFileDialog.asksaveasfilename()
 
+            if os.path.isfile(self.session_output_file):
+                if not os.stat(self.session_output_file).st_size == 0:
+                    showwarning("Nonempty Output File", "Please choose a new csv file. This file already has data from a previous session in it.")
+                    self.session_output_file = None
+                    return
+
         # check that the current block is completed before submitting
         block = self.current_block
 
@@ -1726,7 +1738,10 @@ class MainWindow:
                 if not clip.classification:
                     unfinished_clips.append(clip)
                 if not clip.gender_label:
-                    unfinished_clips.append(clip)
+                    if clip.classification == "JUNK":
+                        continue
+                    else:
+                        unfinished_clips.append(clip)
 
         if not unfinished_clips:
             self.write_block_to_session_out(block)
