@@ -33,6 +33,7 @@ submit_labels_url = ""
 get_labels_url = ""
 get_lab_labels_url = ""
 get_all_labels_url = ""
+get_train_labels_url = ""
 send_back_blocks_url = ""
 
 
@@ -50,8 +51,11 @@ class Block:
         self.coder = None
         self.lab_key = None
         self.lab_name = None
+        self.username = None
         self.old = False
         self.length = 0
+        self.training = False
+        self.reliability = False
 
     def sort_clips(self):
         self.clips.sort(key=lambda x: x.clip_index)
@@ -71,6 +75,9 @@ class Block:
         block["dont-share"] = self.dont_share
         block["clan-file"] = self.clan_file
         block["block-index"] = self.index
+        block["training"] = self.training
+        block["reliability"] = self.reliability
+        block["username"] = self.username
 
         return block
 
@@ -170,18 +177,19 @@ class MainWindow:
         self.menubar = Menu(self.root)
 
         self.filemenu = Menu(self.menubar, tearoff=0)
-        self.filemenu.add_command(label="Load Audio", command=self.load_audio)
-        self.filemenu.add_command(label="Load Clan", command=self.load_clan)
+        #self.filemenu.add_command(label="Load Audio", command=self.load_audio)
+        #self.filemenu.add_command(label="Load Clan", command=self.load_clan)
         self.filemenu.add_command(label="Save Classifications", command=self.output_classifications)
         self.filemenu.add_command(label="Save As Classifications", command=self.set_classification_output)
-        self.filemenu.add_command(label="Load Saved Classifications", command=self.load_classifications)
+        #self.filemenu.add_command(label="Load Saved Classifications", command=self.load_classifications)
         self.filemenu.add_command(label="Set Block Path", command=self.set_clip_path)
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
         #self.filemenu.add_command(label="Get All Lab Info", command=self.get_all_lab_info)
         self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
-        self.filemenu.add_command(label="Submit Block", command=self.submit_block)
-        self.filemenu.add_command(label="Submit All Blocks", command=self.submit_all_blocks)
+        self.filemenu.add_command(label="Submit Block", command=self.submit_block_and_save)
+        #self.filemenu.add_command(label="Submit All Blocks", command=self.submit_all_blocks)
         self.filemenu.add_command(label="Send Blocks Back", command=self.send_blocks_back)
+        self.filemenu.add_command(label="Get Training Blocks", command=self.get_training_blocks)
 
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
@@ -227,20 +235,20 @@ class MainWindow:
                                        command=self.next_clip)
 
         self.output_classifications_button = Button(self.main_frame,
-                                                    text="Save Current Block",
+                                                    text="Save Block",
                                                     command=self.output_classifications)
 
-        self.submit_labels_to_server_button = Button(self.main_frame,
-                                                     text="Submit Block",
-                                                     command=self.submit_block)
+        # self.submit_labels_to_server_button = Button(self.main_frame,
+        #                                              text="Submit Block",
+        #                                              command=self.submit_block)
 
         self.submit_labels_to_server_and_save_button = Button(self.main_frame,
                                                      text="Submit + Save",
                                                      command=self.submit_block_and_save)
 
-        self.submit_all_labels_to_server_button = Button(self.main_frame,
-                                                     text="Submit All Blocks",
-                                                     command=self.submit_all_blocks)
+        # self.submit_all_labels_to_server_button = Button(self.main_frame,
+        #                                              text="Submit All Blocks",
+        #                                              command=self.submit_all_blocks)
 
         self.load_classifications_button = Button(self.main_frame,
                                                   text="Load Classifications",
@@ -263,9 +271,9 @@ class MainWindow:
         self.play_clip_button.grid(row=3, column=2)
         self.next_clip_button.grid(row=4, column=2)
         self.output_classifications_button.grid(row=5, column=2)
-        self.submit_labels_to_server_button.grid(row=6, column=2)
+        #self.submit_labels_to_server_button.grid(row=6, column=2)
         self.submit_labels_to_server_and_save_button.grid(row=7, column=2)
-        self.submit_all_labels_to_server_button.grid(row=8, column=2)
+        #self.submit_all_labels_to_server_button.grid(row=8, column=2)
         self.send_block_back_button.grid(row=7, column=4)
 
         #self.load_classifications_button.grid(row=8, column=2, rowspan=2)
@@ -366,19 +374,17 @@ class MainWindow:
 
         self.key_label_map = {  "a": "ADS",
                                 "c": "CDS",
-                                "j": "JUNK",
-                                "m": "MULTIPLE_ADDR",
-                                "n": "CHILD_NOISE",
-                                "r": "REGISTER_SWITCH"
+                                "j": "JUNK"
                               }
 
         self.gender_label_map = {
-            "M": "MALE",
-            "F": "FEMALE",
-            "U": "UNCLEAR"
+            "m": "MALE",
+            "f": "FEMALE",
+            "u": "UNCLEAR"
         }
 
         self.num_blocks_to_get = 3
+        self.num_training_blocks_to_get = 10
 
         self.lab_info_page = None
         self.lab_info_user_box = None
@@ -386,7 +392,7 @@ class MainWindow:
         self.lab_info_user_past_work_box = None
         self.lab_info_past_work_box = None
         self.lab_info_past_work_info = None
-        self.curr_user = None
+        self.lab_info_curr_user = None
         self.lab_data = None
         self.past_work_item_data = []
         self.curr_past_block = None
@@ -474,7 +480,7 @@ class MainWindow:
         self.load_random_conv_block()
 
     def shortcut_submit_block(self, event):
-        self.submit_block()
+        self.submit_block_and_save()
 
     def reset_frame_focus(self, event):
         self.main_frame.focus_set()
@@ -800,6 +806,10 @@ class MainWindow:
         block_index = int(os.path.basename(path_to_zip).replace(".zip", ""))
 
         block = Block(block_index, csv_data[0][2].replace(".cha", ""))
+        if csv_data[0][11] == "True":
+            block.training = True
+        if csv_data[0][12] == "True":
+            block.reliability = True
 
         block.coder = self.codername_entry.get()
         block.lab_key = self.lab_key
@@ -849,6 +859,11 @@ class MainWindow:
         block_index = int(os.path.basename(path_to_zip).replace(".zip", ""))
 
         block = Block(block_index, csv_data[0][2].replace(".cha", ""))
+
+        if csv_data[0][11] == "True":
+            block.training = True
+        if csv_data[0][12] == "True":
+            block.reliability = True
 
         block.coder = self.codername_entry.get()
         block.lab_key = self.lab_key
@@ -1279,7 +1294,7 @@ class MainWindow:
         general = "General Keys:\n\n"
         load_audio      = "\tshift + a             : load audio file\n"
         load_clan       = "\tshift + c             : load clan file\n"
-        submit_block    = "\tshift + enter         : submit block\n"
+        submit_block    = "\tshift + enter         : submit + save block\n"
         load_prev_block = "\tshift + \             : load previous block\n"
         save_labels     = "\tcmd   + s             : save classifications     (Mac)\n"
         save_labels_win = "\tctrl  + s             : save classifications     (Linux/Windows)\n"
@@ -1294,9 +1309,9 @@ class MainWindow:
         mult_addr  = "\tm : Multiple Addressee\n"
         junk       = "\tj : Junk\n\n"
 
-        male       = "\tM : Male\n"
-        female     = "\tF : Female\n"
-        unclear    = "\tU : Unclear\n"
+        male       = "\tm : Male\n"
+        female     = "\tf : Female\n"
+        unclear    = "\tu : Unclear\n"
 
         clips = "\nClip Navigation/Playback Keys:\n\n"
         up         = "\tup            : previous clip\n"
@@ -1319,9 +1334,9 @@ class MainWindow:
                                 classification+\
                                 ids+\
                                 ads+
-                                noise+\
-                                reg_switch+\
-                                mult_addr+\
+                                #noise+\
+                                #reg_switch+\
+                                #mult_addr+\
                                 junk+\
                                 male+\
                                 female+\
@@ -1474,7 +1489,7 @@ class MainWindow:
     def get_lab_info(self):
         self.lab_info_page = Toplevel()
         self.lab_info_page.title("Lab Info")
-        self.lab_info_page.geometry("1040x400")
+        self.lab_info_page.geometry("1057x400")
 
         users_label = Label(self.lab_info_page, text="Users")
         users_label.grid(row=0, column=0)
@@ -1502,7 +1517,7 @@ class MainWindow:
         self.lab_info_past_work_box.grid(row=1, column=3, rowspan=9)
         self.lab_info_past_work_box.bind('<<ListboxSelect>>', self.update_lab_info_curr_clip)
 
-        self.lab_info_past_work_info = Text(self.lab_info_page, width=38, height=20)
+        self.lab_info_past_work_info = Text(self.lab_info_page, width=36, height=20)
         self.lab_info_past_work_info.grid(row=1, column=4, rowspan=9)
 
         save_this_block_button = Button(self.lab_info_page, text="Save This Block", command=self.lab_info_save_this_block)
@@ -1513,6 +1528,15 @@ class MainWindow:
 
         save_all_blocks_button = Button(self.lab_info_page, text="Save All Blocks", command=self.lab_info_save_all_blocks)
         save_all_blocks_button.grid(row=2, column=5)
+
+        save_training_blocks_button = Button(self.lab_info_page, text="Save Training Blocks",
+                                             command=self.lab_info_save_training_blocks)
+        save_training_blocks_button.grid(row=3, column=5)
+
+        # save_user_training_blocks_button = Button(self.lab_info_page, text="Save User Train Blocks",
+        #                                          command=self.lab_info_save_training_blocks)
+        # save_user_training_blocks_button.grid(row=4, column=5)
+
 
         payload = {"lab-key": self.lab_key}
 
@@ -1591,8 +1615,8 @@ class MainWindow:
         box = evt.widget
         index = int(box.curselection()[0])
 
-        user = box.get(index)
-        user_data = self.lab_data["users"][str(user)]
+        self.lab_info_curr_user = box.get(index)
+        user_data = self.lab_data["users"][str(self.lab_info_curr_user)]
 
         i = 0
         self.lab_info_user_work_box.delete(0, END)
@@ -1629,7 +1653,9 @@ class MainWindow:
         global get_labels_url
         global get_lab_labels_url
         global get_all_labels_url
+        global get_train_labels_url
         global send_back_blocks_url
+
 
         showwarning("Config File", "Please choose a config.json file to load")
         config_path = tkFileDialog.askopenfilename()
@@ -1648,11 +1674,15 @@ class MainWindow:
             get_labels_url = config["server-urls"]["get_labels_url"]
             get_lab_labels_url = config["server-urls"]["get_lab_labels_url"]
             get_all_labels_url = config["server-urls"]["get_all_labels_url"]
+            get_train_labels_url = config["server-urls"]["get_train_labels_url"]
             send_back_blocks_url = config["server-urls"]["send_back_blocks_url"]
 
     def submit_block(self):
         # check that the current block is completed before submitting
         block = self.current_block
+
+        block.username = self.codername_entry.get()
+
         unfinished_clips = []
         for clip in block.clips:
             if clip.clip_tier == "FAN" or clip.clip_tier == "MAN":
@@ -1689,6 +1719,7 @@ class MainWindow:
 
         # check that the current block is completed before submitting
         block = self.current_block
+
         unfinished_clips = []
         for clip in block.clips:
             if clip.clip_tier == "FAN" or clip.clip_tier == "MAN":
@@ -1704,8 +1735,6 @@ class MainWindow:
             showwarning("Incomplete Block", "You haven't classified all the FAN/MAN tiered clips within this block")
             return
 
-
-
     def submit_all_blocks(self):
         blocks = self.get_completed_blocks()
 
@@ -1718,6 +1747,7 @@ class MainWindow:
 
 
         for block in blocks[0]:
+            block.username = self.codername_entry.get()
             submission = block.to_dict()
             resp = requests.post(submit_labels_url, json=submission, allow_redirects=False)
 
@@ -1841,8 +1871,14 @@ class MainWindow:
         if not lab_info_url:
             self.parse_config()
 
+        training = True if "train_" in work_item else False
+        reliability = True if "relia_" in work_item else False
+
         payload = {"lab-key": self.lab_key,
-                   "item-id": work_item}
+                   "item-id": work_item,
+                   "training": training,
+                   "reliability": reliability,
+                   "username": self.lab_info_curr_user}
 
         resp = requests.post(get_labels_url, json=payload, allow_redirects=False)
 
@@ -2031,7 +2067,8 @@ class MainWindow:
             writer = csv.writer(out)
 
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender", "dont_share"])
+                             "timestamp", "clip", "tier", "label", "gender",
+                             "dont_share", "training", "reliability"])
 
             block = self.curr_past_block
             dont_share = False
@@ -2042,7 +2079,8 @@ class MainWindow:
                 writer.writerow([clip.label_date, clip.coder, clip.clan_file,
                                  clip.parent_audio_path, clip.block_index,
                                  clip.timestamp, clip.clip_index, clip.clip_tier,
-                                 clip.classification, clip.gender_label, dont_share])
+                                 clip.classification, clip.gender_label, dont_share,
+                                 block.training, block.reliability])
 
     def lab_info_save_lab_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -2068,7 +2106,8 @@ class MainWindow:
             writer = csv.writer(out)
 
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender", "dont_share"])
+                             "timestamp", "clip", "tier", "label", "gender",
+                             "dont_share", "training", "reliability"])
 
             for block in blocks:
                 dont_share = False
@@ -2079,7 +2118,8 @@ class MainWindow:
                     writer.writerow([clip.label_date, clip.coder, clip.clan_file,
                                      clip.parent_audio_path, clip.block_index,
                                      clip.timestamp, clip.clip_index, clip.clip_tier,
-                                     clip.classification, clip.gender_label, dont_share])
+                                     clip.classification, clip.gender_label, dont_share,
+                                     block.training, block.reliability])
 
     def lab_info_save_all_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -2105,7 +2145,46 @@ class MainWindow:
             writer = csv.writer(out)
 
             writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender", "dont_share"])
+                             "timestamp", "clip", "tier", "label", "gender",
+                             "dont_share", "training", "reliability"])
+
+            for block in blocks:
+                dont_share = False
+                if block.dont_share:
+                    dont_share = True
+
+                for clip in block.clips:
+                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
+                                     clip.parent_audio_path, clip.block_index,
+                                     clip.timestamp, clip.clip_index, clip.clip_tier,
+                                     clip.classification, clip.gender_label, dont_share,
+                                     block.training, block.reliability])
+
+    def lab_info_save_training_blocks(self):
+        output_path = tkFileDialog.asksaveasfilename()
+
+        if not self.lab_key:
+            showwarning("Load Config", "You need to load the config.json first")
+            return
+
+        payload = {"lab-key": self.lab_key}
+
+        resp = requests.post(get_train_labels_url, json=payload, allow_redirects=False)
+
+        block_data = None
+        if resp.ok:
+            block_data = json.loads(resp.content)
+
+        print block_data
+        blocks = []
+        for block in block_data["blocks"]:
+            blocks.append(self.json_to_block(block))
+
+        with open(output_path, "wb") as out:
+            writer = csv.writer(out)
+
+            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
+                             "timestamp", "clip", "tier", "label", "gender", "dont_share", "training", "reliability"])
 
 
             for block in blocks:
@@ -2117,12 +2196,16 @@ class MainWindow:
                     writer.writerow([clip.label_date, clip.coder, clip.clan_file,
                                      clip.parent_audio_path, clip.block_index,
                                      clip.timestamp, clip.clip_index, clip.clip_tier,
-                                     clip.classification, clip.gender_label, dont_share])
+                                     clip.classification, clip.gender_label, dont_share,
+                                     block.training, block.reliability])
 
     def json_to_block(self, block_json):
 
         block = Block(block_json["block-index"], block_json["clan-file"])
         block.dont_share = block_json["dont-share"]
+
+        block.training = block_json["training"]
+        block.reliability = block_json["reliability"]
 
         for clip in block_json["clips"]:
             block.clips.append(self.json_to_clip(clip, block.index, block.clan_file))
@@ -2156,7 +2239,15 @@ class MainWindow:
         send_back_button = Button(self.send_blocks_back_page, text="Send Back", command=self.send_back)
         send_back_button.grid(row=1, column=0)
 
+        self.select_all_send_back_var = IntVar()
+        self.send_all_back_radio = Checkbutton(self.send_blocks_back_page,
+                                               text="Select All",
+                                               variable=self.select_all_send_back_var,
+                                               command=self.send_back_select_all)
+        self.send_all_back_radio.grid(row=2, column=0)
+
         self.send_back_block_list.delete(0, END)
+
         for index, block in enumerate(self.clip_blocks):
             block_string = "{} : {}".format(index+1, block.index)
             if block.old:
@@ -2166,6 +2257,7 @@ class MainWindow:
             self.send_back_block_list.insert(index, block_string)
 
     def send_back(self):
+
 
         selections = self.send_back_block_list.curselection()
         selection_ids = []
@@ -2216,7 +2308,8 @@ class MainWindow:
 
             if not self.session_output_header_written:
                 writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                                 "timestamp", "clip", "tier", "label", "gender", "dont_share"])
+                                 "timestamp", "clip", "tier", "label", "gender",
+                                 "dont_share", "training", "reliability"])
                 self.session_output_header_written = True
 
             dont_share = False
@@ -2227,7 +2320,70 @@ class MainWindow:
                 writer.writerow([clip.label_date, clip.coder, clip.clan_file,
                                  clip.parent_audio_path, clip.block_index,
                                  clip.timestamp, clip.clip_index, clip.clip_tier,
-                                 clip.classification, clip.gender_label, dont_share])
+                                 clip.classification, clip.gender_label, dont_share,
+                                 block.training, block.reliability])
+
+    def send_back_select_all(self):
+        if self.select_all_send_back_var:
+            self.send_back_block_list.selection_set(0, END)
+        else:
+            self.send_back_block_list.selection_clear(0, END)
+
+    def get_training_blocks(self):
+        if not self.clip_directory:
+            showwarning("Set Audio Clips Directory", "You need to have a directory set before downloading blocks\n\n" +
+                        "(File -> Set Block Path)")
+            return
+        if self.codername_entry.get() == "CODER_NAME":
+            showwarning("Set Coder Name", "You need to set CODER_NAME before requesting blocks")
+            return
+
+        error_response = ""
+        for i in range(self.num_training_blocks_to_get):
+            error_response = self.get_training_block()
+
+        if error_response:
+            showwarning("Bad Request", "Server: " + error_response)
+            # return
+
+        self.load_downloaded_blocks()
+
+    def get_training_block(self):
+        payload = {}
+        payload["lab-key"] = self.lab_key
+        payload["username"] = self.codername_entry.get()
+        payload["training"] = True
+        payload["train-pack-num"] = 1
+
+        if not get_block_url:
+            self.parse_config()
+
+        resp = requests.post(get_block_url, json=payload, stream=True, allow_redirects=False)
+
+        if resp.status_code != 200:
+            return resp.content
+
+        if resp.ok:
+
+            params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
+            filename = params[1]['filename']
+            file_end = os.path.basename(filename)
+            file_root = "{}_{}_block{}".format(self.codername_entry.get(), os.path.dirname(filename), file_end)
+            block_path = os.path.join(self.clip_directory, file_root)
+
+            if not os.path.exists(block_path):
+                os.makedirs(block_path)
+
+            output_path = os.path.join(block_path, file_end)
+
+            with open(output_path, "wb") as output:
+                output.write(resp.content)
+
+            block = self.create_block_from_zip(output_path)
+
+            print block
+            self.clip_blocks.append(block)
+
 
 if __name__ == "__main__":
 
