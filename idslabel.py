@@ -196,7 +196,7 @@ class MainWindow:
 
         self.helpmenu= Menu(self.menubar, tearoff=0)
         self.helpmenu.add_command(label="About", command=self.show_about)
-        self.helpmenu.add_command(label="Show Shortcuts", command=self.show_shortcuts)
+        self.helpmenu.add_command(label="Show Info & Shortcuts", command=self.show_shortcuts)
 
         self.menubar.add_cascade(label="Help", menu=self.helpmenu)
 
@@ -1288,11 +1288,14 @@ class MainWindow:
 
     def show_shortcuts(self):
         self.shortcuts_menu = Toplevel()
-        self.shortcuts_menu.title("Shortcuts")
-        self.shortcuts_menu.geometry("540x470")
-        textbox = Text(self.shortcuts_menu, width=90, height=30)
+        self.shortcuts_menu.title("Shortcuts & Info")
+        self.shortcuts_menu.geometry("540x500")
+        textbox = Text(self.shortcuts_menu, width=90, height=35)
         textbox.pack()
 
+        welcome_message = "Welcome to IDSLabel. For instructions on how to get started, see:\n\n" +\
+            "github repo:  https://github.com/SeedlingsBabylab/idslabel\n"+\
+            "osf wiki:     https://osf.io/d9ac4/wiki/home/\n\n\n"
 
         general = "General Keys:\n\n"
         load_audio      = "\tshift + a             : load audio file\n"
@@ -1324,7 +1327,8 @@ class MainWindow:
         space      = "\tspace         : play clip\n"
         shft_space = "\tshift + space : play whole block\n"
 
-        textbox.insert('1.0', general+\
+        textbox.insert('1.0', welcome_message+\
+                                general+\
                                 #load_audio+\
                                 #load_clan+\
                                 #load_block+\
