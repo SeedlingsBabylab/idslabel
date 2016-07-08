@@ -19,10 +19,11 @@ from operator import itemgetter
 from Tkinter import *
 import tkFileDialog
 import tkSimpleDialog
-from tkMessageBox import showwarning
+from tkMessageBox import showwarning, askyesno
 
 
-version = "0.0.8"
+
+version = "0.0.9"
 
 
 get_block_url = ""
@@ -34,6 +35,7 @@ get_labels_url = ""
 get_lab_labels_url = ""
 get_all_labels_url = ""
 get_train_labels_url = ""
+get_relia_labels_url = ""
 send_back_blocks_url = ""
 
 
@@ -258,6 +260,15 @@ class MainWindow:
                                         text="Get Blocks",
                                         command=self.get_blocks)
 
+        self.get_training_blocks_button = Button(self.main_frame,
+                                                 text="Get Training Blocks",
+                                                 command=self.get_training_blocks)
+
+        self.get_reliability_blocks_button = Button(self.main_frame,
+                                                 text="Get Reliability Blocks",
+                                                 command=self.get_reliability_blocks)
+
+
         self.send_block_back_button = Button(self.main_frame,
                                             text="Send Blocks Back",
                                             command=self.send_blocks_back)
@@ -265,14 +276,16 @@ class MainWindow:
         #self.load_clan_button.grid(row=0, column=0)
         #self.load_audio_button.grid(row=0, column=1)
         self.get_blocks_button.grid(row=0, column=2)
+        self.get_training_blocks_button.grid(row=1, column=2)
+        self.get_reliability_blocks_button.grid(row=2, column=2)
 
         #self.load_rand_block_button.grid(row=1, column=2)
-        self.play_block_button.grid(row=2, column=2)
-        self.play_clip_button.grid(row=3, column=2)
-        self.next_clip_button.grid(row=4, column=2)
-        self.output_classifications_button.grid(row=5, column=2)
+        self.play_block_button.grid(row=4, column=2)
+        self.play_clip_button.grid(row=5, column=2)
+        self.next_clip_button.grid(row=6, column=2)
+        self.output_classifications_button.grid(row=7, column=2)
         #self.submit_labels_to_server_button.grid(row=6, column=2)
-        self.submit_labels_to_server_and_save_button.grid(row=7, column=2)
+        self.submit_labels_to_server_and_save_button.grid(row=9, column=2)
         #self.submit_all_labels_to_server_button.grid(row=8, column=2)
         self.send_block_back_button.grid(row=7, column=4)
 
@@ -418,6 +431,8 @@ class MainWindow:
 
         self.session_output_file = None
         self.session_output_header_written = False
+
+        self.dont_share_applied = False
 
     def key_select(self, event):
         self.main_frame.focus_set()
@@ -1049,6 +1064,7 @@ class MainWindow:
         self.update_curr_clip_info()
 
     def load_downloaded_block(self, block_index):
+        self.dont_share_applied = False
         self.current_block = self.clip_blocks[block_index]
         self.current_block_index = block_index
 
@@ -1201,6 +1217,7 @@ class MainWindow:
         if self.current_block:
             if self.dont_share_var.get() == 1:
                 self.current_block.dont_share = True
+                self.dont_share_applied = True
             else:
                 self.current_block.dont_share = False
 
@@ -1536,9 +1553,11 @@ class MainWindow:
         save_all_blocks_button = Button(self.lab_info_page, text="Save All Blocks", command=self.lab_info_save_all_blocks)
         save_all_blocks_button.grid(row=2, column=5)
 
-        save_training_blocks_button = Button(self.lab_info_page, text="Save Training Blocks",
-                                             command=self.lab_info_save_training_blocks)
+        save_training_blocks_button = Button(self.lab_info_page, text="Save Training Blocks", command=self.lab_info_save_training_blocks)
         save_training_blocks_button.grid(row=3, column=5)
+
+        save_reliability_blocks_button = Button(self.lab_info_page, text="Save Reliability Blocks", command=self.lab_info_save_reliability_blocks)
+        save_reliability_blocks_button.grid(row=4, column=5)
 
         # save_user_training_blocks_button = Button(self.lab_info_page, text="Save User Train Blocks",
         #                                          command=self.lab_info_save_training_blocks)
@@ -1557,34 +1576,6 @@ class MainWindow:
                 self.lab_info_user_box.insert(i, value['name'])
                 self.lab_users.append(value["name"])
                 i+=1
-
-    def get_all_lab_info(self):
-        self.all_lab_info_page = Toplevel()
-        self.all_lab_info_page.title("All Lab Info")
-        self.all_lab_info_page.geometry("450x400")
-
-        labs_label = Label(self.all_lab_info_page, text="Labs")
-        labs_label.grid(row=0, column=0)
-
-        users_label = Label(self.all_lab_info_page, text="Users")
-        users_label.grid(row=0, column=1)
-
-        self.all_lab_info_lab_box = Listbox(self.all_lab_info_page, width=15, height=20)
-        self.all_lab_info_lab_box.grid(row=1, column=0)
-        self.all_lab_info_lab_box.bind('<<ListboxSelect>>', self.update_curr_lab)
-
-        self.all_lab_info_user_box = Listbox(self.all_lab_info_page, width=15, height=20)
-        self.all_lab_info_user_box.grid(row=1, column=1)
-
-        payload = {"lab-key": "1234567654321"}
-
-        resp = requests.post(all_lab_info_url, json=payload, allow_redirects=False)
-
-        if resp.ok:
-            self.all_lab_data = json.loads(resp.content)
-
-            for index, lab in enumerate(self.all_lab_data):
-                self.all_lab_info_lab_box.insert(index, lab['key'])
 
     def lab_info_ping(self):
         if not lab_info_url:
@@ -1661,6 +1652,7 @@ class MainWindow:
         global get_lab_labels_url
         global get_all_labels_url
         global get_train_labels_url
+        global get_relia_labels_url
         global send_back_blocks_url
 
 
@@ -1682,6 +1674,7 @@ class MainWindow:
             get_lab_labels_url = config["server-urls"]["get_lab_labels_url"]
             get_all_labels_url = config["server-urls"]["get_all_labels_url"]
             get_train_labels_url = config["server-urls"]["get_train_labels_url"]
+            get_relia_labels_url = config["server-urls"]["get_relia_labels_url"]
             send_back_blocks_url = config["server-urls"]["send_back_blocks_url"]
 
     def submit_block(self):
@@ -1723,6 +1716,20 @@ class MainWindow:
         self.load_downloaded_block(0)
 
     def submit_block_and_save(self):
+
+        if not self.dont_share_applied:
+            result = askyesno("Personal Information", "Block contained personal information?")
+            if result:
+                self.current_block.dont_share = True
+            else:
+                self.current_block.dont_share = False
+        else:
+            result = askyesno("Personal Information", "Block contained personal information?\n\nCurrent value: True")
+            if result:
+                self.current_block.dont_share = True
+            else:
+                self.current_block.dont_share = False
+
         if not self.session_output_file:
             showwarning("Set Output File", "Please choose a csv file to save this session's blocks to")
             self.session_output_file = tkFileDialog.asksaveasfilename()
@@ -1891,7 +1898,7 @@ class MainWindow:
             self.parse_config()
 
         training = True if "train_" in work_item else False
-        reliability = True if "relia_" in work_item else False
+        reliability = True if "reliability" in work_item else False
 
         payload = {"lab-key": self.lab_key,
                    "item-id": work_item,
@@ -2218,6 +2225,44 @@ class MainWindow:
                                      clip.classification, clip.gender_label, dont_share,
                                      block.training, block.reliability])
 
+    def lab_info_save_reliability_blocks(self):
+        output_path = tkFileDialog.asksaveasfilename()
+
+        if not self.lab_key:
+            showwarning("Load Config", "You need to load the config.json first")
+            return
+
+        payload = {"lab-key": self.lab_key}
+
+        resp = requests.post(get_relia_labels_url, json=payload, allow_redirects=False)
+
+        block_data = None
+        if resp.ok:
+            block_data = json.loads(resp.content)
+
+        print block_data
+        blocks = []
+        for block in block_data["blocks"]:
+            blocks.append(self.json_to_block(block))
+
+        with open(output_path, "wb") as out:
+            writer = csv.writer(out)
+
+            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
+                             "timestamp", "clip", "tier", "label", "gender", "dont_share", "training", "reliability"])
+
+            for block in blocks:
+                dont_share = False
+                if block.dont_share:
+                    dont_share = True
+
+                for clip in block.clips:
+                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
+                                     clip.parent_audio_path, clip.block_index,
+                                     clip.timestamp, clip.clip_index, clip.clip_tier,
+                                     clip.classification, clip.gender_label, dont_share,
+                                     block.training, block.reliability])
+
     def json_to_block(self, block_json):
 
         block = Block(block_json["block-index"], block_json["clan-file"])
@@ -2402,6 +2447,62 @@ class MainWindow:
 
             print block
             self.clip_blocks.append(block)
+
+    def get_reliability_blocks(self):
+        if not self.clip_directory:
+            showwarning("Set Audio Clips Directory", "You need to have a directory set before downloading blocks\n\n" +
+                        "(File -> Set Block Path)")
+            return
+        if self.codername_entry.get() == "CODER_NAME":
+            showwarning("Set Coder Name", "You need to set CODER_NAME before requesting blocks")
+            return
+
+        error_response = ""
+        for i in range(self.num_blocks_to_get):
+            error_response = self.get_reliability_block()
+
+        if error_response:
+            showwarning("Bad Request", "Server: " + error_response)
+            # return
+
+        self.load_downloaded_blocks()
+
+    def get_reliability_block(self):
+        payload = {}
+        payload["lab-key"] = self.lab_key
+        payload["username"] = self.codername_entry.get()
+        payload["reliability"] = True
+        payload["train-pack-num"] = 1
+
+        if not get_block_url:
+            self.parse_config()
+
+        resp = requests.post(get_block_url, json=payload, stream=True, allow_redirects=False)
+
+        if resp.status_code != 200:
+            return resp.content
+
+        if resp.ok:
+
+            params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
+            filename = params[1]['filename']
+            file_end = os.path.basename(filename)
+            file_root = "{}_{}_block{}".format(self.codername_entry.get(), os.path.dirname(filename), file_end)
+            block_path = os.path.join(self.clip_directory, file_root)
+
+            if not os.path.exists(block_path):
+                os.makedirs(block_path)
+
+            output_path = os.path.join(block_path, file_end)
+
+            with open(output_path, "wb") as output:
+                output.write(resp.content)
+
+            block = self.create_block_from_zip(output_path)
+
+            print block
+            self.clip_blocks.append(block)
+
 
 
 if __name__ == "__main__":
