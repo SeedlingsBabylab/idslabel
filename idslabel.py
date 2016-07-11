@@ -1088,6 +1088,8 @@ class MainWindow:
         self.block_list.selection_clear(0, END)
         self.block_list.selection_set(0)
 
+        self.dont_share_button.deselect()
+
         self.update_curr_clip_info()
 
     def move_currblock_forward(self):
@@ -1713,22 +1715,24 @@ class MainWindow:
 
         self.block_list.delete(0, END)
         self.load_downloaded_blocks()
-        self.load_downloaded_block(0)
+        if self.clip_blocks:
+            self.load_downloaded_block(0)
 
     def submit_block_and_save(self):
 
         if not self.dont_share_applied:
-            result = askyesno("Personal Information", "Block contained personal information?")
+            result = askyesno("Personal Information", "Is block ok to share?")
             if result:
-                self.current_block.dont_share = True
-            else:
                 self.current_block.dont_share = False
+            else:
+                self.current_block.dont_share = True
+                self.dont_share_applied = True
         else:
-            result = askyesno("Personal Information", "Block contained personal information?\n\nCurrent value: True")
+            result = askyesno("Personal Information", "Is block ok to share?\n\nCurrent value: No")
             if result:
-                self.current_block.dont_share = True
-            else:
                 self.current_block.dont_share = False
+            else:
+                self.current_block.dont_share = True
 
         if not self.session_output_file:
             showwarning("Set Output File", "Please choose a csv file to save this session's blocks to")
@@ -1825,7 +1829,7 @@ class MainWindow:
         return (completed_blocks, incomplete_blocks)
 
     def load_downloaded_blocks(self):
-
+        self.block_list.delete(0, END)
         self.previous_block_menu.delete(0, END)
         for index, block in enumerate(self.clip_blocks):
             block_string = "{} : {}".format(index+1, block.index)
