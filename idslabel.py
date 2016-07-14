@@ -12,7 +12,6 @@ import requests
 import cgi
 import zipfile
 import shutil
-import subprocess as sp
 
 from operator import itemgetter
 
@@ -20,7 +19,6 @@ from Tkinter import *
 import tkFileDialog
 import tkSimpleDialog
 from tkMessageBox import showwarning, askyesno
-
 
 
 version = "0.0.9"
@@ -47,7 +45,6 @@ class Block:
         self.num_clips = None
         self.clips = []
         self.sliced = False
-        #self.contains_fan_or_man = False
         self.dont_share = False
         self.id = ""
         self.coder = None
@@ -73,7 +70,6 @@ class Block:
         block["lab-key"] = self.lab_key
         block["lab-name"] = self.lab_name
         block["id"] = self.id
-        #block["fan-or-man"] = self.contains_fan_or_man
         block["dont-share"] = self.dont_share
         block["clan-file"] = self.clan_file
         block["block-index"] = self.index
@@ -107,8 +103,6 @@ class Clip:
     def to_dict(self):
         clip = {}
 
-        #clip["audio-path"] = self.audio_path
-        #clip["parent-audio-path"] = self.parent_audio_path
         clip["clan-file"] = self.clan_file
         clip["block-index"] = self.block_index
         clip["clip-index"] = self.clip_index
@@ -166,30 +160,22 @@ class MainWindow:
         if sys.platform == "darwin":
             self.main_frame.bind("<Command-s>", self.save_classifications)
             self.main_frame.bind("<Command-S>", self.save_as_classifications)
-            self.main_frame.bind("<Command-l>", self.reload_classifications)
         if sys.platform == "linux2":
             self.main_frame.bind("<Control-s>", self.save_classifications)
             self.main_frame.bind("<Control-S>", self.save_as_classifications)
-            self.main_frame.bind("<Control-l>", self.reload_classifications)
         if sys.platform == "win32":
             self.main_frame.bind("<Control-s>", self.save_classifications)
             self.main_frame.bind("<Control-S>", self.save_as_classifications)
-            self.main_frame.bind("<Control-l>", self.reload_classifications)
 
         self.menubar = Menu(self.root)
 
         self.filemenu = Menu(self.menubar, tearoff=0)
-        #self.filemenu.add_command(label="Load Audio", command=self.load_audio)
-        #self.filemenu.add_command(label="Load Clan", command=self.load_clan)
         self.filemenu.add_command(label="Save Classifications", command=self.output_classifications)
         self.filemenu.add_command(label="Save As Classifications", command=self.set_classification_output)
-        #self.filemenu.add_command(label="Load Saved Classifications", command=self.load_classifications)
         self.filemenu.add_command(label="Set Block Path", command=self.set_clip_path)
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
-        #self.filemenu.add_command(label="Get All Lab Info", command=self.get_all_lab_info)
         self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
         self.filemenu.add_command(label="Submit Block", command=self.submit_block_and_save)
-        #self.filemenu.add_command(label="Submit All Blocks", command=self.submit_all_blocks)
         self.filemenu.add_command(label="Send Blocks Back", command=self.send_blocks_back)
         self.filemenu.add_command(label="Get Training Blocks", command=self.get_training_blocks)
 
@@ -208,21 +194,9 @@ class MainWindow:
 
         self.main_frame.pack()
 
-        self.load_clan_button = Button(self.main_frame,
-                                          text= "Load Clan File",
-                                          command=self.load_clan)
-
         self.load_audio_button = Button(self.main_frame,
                                            text= "Load Audio",
                                            command=self.load_audio)
-
-        self.load_rand_block_button = Button(self.main_frame,
-                                             text="Load Block",
-                                             command=self.load_random_conv_block)
-
-        self.load_previous_block_button = Button(self.main_frame,
-                                                 text="Previous Block",
-                                                 command=self.load_previous_block)
 
         self.play_clip_button = Button(self.main_frame,
                                        text="Play Clip",
@@ -240,21 +214,11 @@ class MainWindow:
                                                     text="Save Block",
                                                     command=self.output_classifications)
 
-        # self.submit_labels_to_server_button = Button(self.main_frame,
-        #                                              text="Submit Block",
-        #                                              command=self.submit_block)
-
         self.submit_labels_to_server_and_save_button = Button(self.main_frame,
                                                      text="Submit + Save",
                                                      command=self.submit_block_and_save)
 
-        # self.submit_all_labels_to_server_button = Button(self.main_frame,
-        #                                              text="Submit All Blocks",
-        #                                              command=self.submit_all_blocks)
 
-        self.load_classifications_button = Button(self.main_frame,
-                                                  text="Load Classifications",
-                                                  command=self.load_classifications)
 
         self.get_blocks_button = Button(self.main_frame,
                                         text="Get Blocks",
@@ -273,23 +237,16 @@ class MainWindow:
                                             text="Send Blocks Back",
                                             command=self.send_blocks_back)
 
-        #self.load_clan_button.grid(row=0, column=0)
-        #self.load_audio_button.grid(row=0, column=1)
         self.get_blocks_button.grid(row=0, column=2)
         self.get_training_blocks_button.grid(row=1, column=2)
         self.get_reliability_blocks_button.grid(row=2, column=2)
 
-        #self.load_rand_block_button.grid(row=1, column=2)
         self.play_block_button.grid(row=4, column=2)
         self.play_clip_button.grid(row=5, column=2)
         self.next_clip_button.grid(row=6, column=2)
         self.output_classifications_button.grid(row=7, column=2)
-        #self.submit_labels_to_server_button.grid(row=6, column=2)
         self.submit_labels_to_server_and_save_button.grid(row=9, column=2)
-        #self.submit_all_labels_to_server_button.grid(row=8, column=2)
         self.send_block_back_button.grid(row=7, column=4)
-
-        #self.load_classifications_button.grid(row=8, column=2, rowspan=2)
 
         self.block_list = Listbox(self.main_frame, width=15, height=25)
         self.block_list.grid(row=1, column=3, rowspan=24)
@@ -341,11 +298,6 @@ class MainWindow:
 
         self.curr_clip_info.configure(state="disabled")
 
-        # self.block_condition_var = IntVar()
-        # self.block_condition_button = Checkbutton(self.main_frame, text="only load blocks with\nat least 1 FAN/MAN\ntier", variable=self.block_condition_var)
-        # self.block_condition_button.select()
-        # self.block_condition_button.grid(row=2, column=4)
-
         self.dont_share_var = IntVar()
         self.dont_share_button = Checkbutton(self.main_frame,
                                              text="don't share this block",
@@ -375,9 +327,6 @@ class MainWindow:
         self.old_classifications_file = ""
 
         self.loaded_classification_file = []
-
-        self.paths_text = None
-        #self.print_paths()
 
         self.reload_multiline_parents = []
 
@@ -421,8 +370,6 @@ class MainWindow:
 
         self.lab_key = ""
         self.lab_name = ""
-
-        #self.parse_config()
 
         self.prev_downl_blocks = []
 
@@ -470,12 +417,6 @@ class MainWindow:
             self.current_clip.gender_label = self.gender_label_map[selected_key]
             self.update_curr_clip_info()
 
-        # if selected_key == "C":
-        #     self.load_clan()
-        # if selected_key == "A":
-        #     self.load_audio()
-        # if selected_key == "|":
-        #     self.load_previous_block()
         if selected_key == "O":
             self.output_classifications()
 
@@ -494,9 +435,6 @@ class MainWindow:
     def shortcut_next_clip(self, event):
         self.next_clip()
 
-    def shortcut_load_random_block(self, event):
-        self.load_random_conv_block()
-
     def shortcut_submit_block(self, event):
         self.submit_block_and_save()
 
@@ -504,6 +442,11 @@ class MainWindow:
         self.main_frame.focus_set()
 
     def codername_entered(self, event):
+        try:
+            self.check_github_for_latest_version()
+        except Exception as e:
+            print e.message
+
         if not self.clip_directory:
             showwarning("Clips Directory", "Choose directory to store downloaded blocks")
             self.clip_directory = tkFileDialog.askdirectory()
@@ -512,33 +455,7 @@ class MainWindow:
         if self.prev_downl_blocks:
             self.clip_blocks.extend(self.prev_downl_blocks)
         self.load_downloaded_blocks()
-        #self.print_paths()
         self.main_frame.focus_set()
-
-    def load_clan(self):
-        try:
-            self.check_github_for_latest_version()
-        except Exception as e:
-            print e.message
-
-        self.clan_file = tkFileDialog.askopenfilename()
-
-        showwarning("Clips", "Please choose a folder to store audio clips")
-        self.set_clip_path()
-        #self.print_paths()
-        if not self.classification_output:
-            showwarning("Output", "Please create a classification output file (.csv)")
-            self.set_classification_output()
-            #self.print_paths()
-
-        showwarning("Note", "Remember to write your name in the 'CODER_NAME' box before starting")
-
-        self.parse_clan(self.clan_file)
-
-        if not os.path.isfile(self.classification_output):
-            self.output_classifications()
-
-        #self.print_paths()
 
     def find_clip_and_update(self, entry):
         block_index = int(entry[4])-1
@@ -552,36 +469,8 @@ class MainWindow:
             block.clips[clip_index].multiline = True
             block.clips[clip_index].multi_tier_parent = entry[9]
 
-    def reload_classifications(self, event):
-        self.load_classifications()
-
-    def load_classifications(self):
-
-        if not self.clip_blocks:
-            showwarning("Reload", "You need to load audio and cha file before reloading saved classifications")
-            return
-        self.old_classifications_file = tkFileDialog.askopenfilename()
-
-        with open(self.old_classifications_file, "rU") as input:
-            reader = csv.reader(input)
-            reader.next()
-            for row in reader:
-                self.loaded_classification_file.append(row)
-
-
-        if self.loaded_classification_file:
-            completed_classifications = []
-            for entry in self.loaded_classification_file:
-                if entry[0]:
-                    completed_classifications.append(entry)
-
-
-            for entry in completed_classifications:
-                self.find_clip_and_update(entry)
-
     def load_audio(self):
         self.audio_file = tkFileDialog.askopenfilename()
-        #self.print_paths()
 
     def play_clip(self):
         current_clip = self.block_list.curselection()
@@ -640,165 +529,6 @@ class MainWindow:
         stream.close()
 
         p.terminate()
-
-    def parse_clan(self, path):
-        conversations = []
-
-        curr_conversation = []
-        with open(path, "rU") as file:
-            for line in file:
-                if line.startswith("@Bg:\tConversation"):
-                    curr_conversation.append(line)
-                    continue
-                if curr_conversation:
-                    curr_conversation.append(line)
-                if line.startswith("@Eg:\tConversation"):
-                    conversations.append(curr_conversation)
-                    curr_conversation = []
-
-        conversation_blocks = self.filter_conversations(conversations)
-
-
-        for index, block in enumerate(conversation_blocks):
-            self.clip_blocks.append(self.create_clips(block, path, index+1))
-
-        self.find_multitier_parents()
-
-        self.block_count_label = Label(self.main_frame,
-                                       text=str(len(conversation_blocks))+\
-                                       " blocks")
-
-        self.block_count_label.grid(row=27, column=3, columnspan=1)
-
-        self.create_random_block_range()
-
-    def slice_block(self, block):
-
-        clanfilename = block.clan_file[0:5]
-
-        all_blocks_path = os.path.join(self.clip_directory, clanfilename)
-
-        if not os.path.exists(all_blocks_path):
-            os.makedirs(all_blocks_path)
-
-        block_path = os.path.join(all_blocks_path, str(block.index))
-
-
-        if not os.path.exists(block_path):
-            os.makedirs(block_path)
-
-        # showwarning("working directory", "{}".format(os.getcwd()))
-
-        out, err = None, None
-        for clip in block.clips:
-            command = ["./ffmpeg",
-                       "-ss",
-                       str(clip.start_time),
-                       "-t",
-                       str(clip.offset_time),
-                       "-i",
-                       self.audio_file,
-                       clip.audio_path,
-                       "-y"]
-
-            command_string = " ".join(command)
-            print command_string
-
-            pipe = sp.Popen(command, stdout=sp.PIPE, bufsize=10**8)
-            out, err = pipe.communicate()
-        # showwarning("command output", "{}".format(out))
-        # showwarning("command err", "{}".format(err))
-
-    def create_random_block_range(self):
-
-        self.randomized_blocks = list(self.clip_blocks)
-        random.shuffle(self.randomized_blocks)
-
-    def filter_conversations(self, conversations):
-        filtered_conversations = []
-
-        last_tier = ""
-
-        for conversation in conversations:
-            conv_block = []
-            for line in conversation:
-                if line.startswith("%"):
-                    continue
-                elif line.startswith("@"):
-                    continue
-                elif line.startswith("*"):
-                    last_tier = line[0:4]
-                    conv_block.append(line)
-                else:
-                    conv_block.append(last_tier+line+"   MULTILINE")
-            filtered_conversations.append(conv_block)
-            conv_block = []
-
-        return filtered_conversations
-
-    def find_multitier_parents(self):
-
-        for block in self.clip_blocks:
-            for clip in block.clips:
-                if clip.multiline:
-                    self.reverse_parent_lookup(block, clip)
-
-    def reverse_parent_lookup(self, block, multi_clip):
-        for clip in reversed(block.clips[0:multi_clip.clip_index-1]):
-            if clip.multiline:
-                continue
-            else:
-                multi_clip.multi_tier_parent = clip.timestamp
-                return
-
-    def create_clips(self, clips, parent_path, block_index):
-
-        parent_path = os.path.split(parent_path)[1]
-
-        parent_audio_path = os.path.split(self.audio_file)[1]
-
-        block = Block(block_index, parent_path)
-
-        for index, clip in enumerate(clips):
-
-            clip_path = os.path.join(self.clip_directory,
-                                     parent_path[0:5],
-                                     str(block_index),
-                                     str(index+1)+".wav")
-
-            curr_clip = Clip(clip_path, block_index, index+1)
-            curr_clip.parent_audio_path = parent_audio_path
-            curr_clip.clan_file = parent_path
-            curr_clip.clip_tier = clip[1:4]
-            if "MULTILINE" in clip:
-                curr_clip.multiline = True
-
-            interval_reg_result = self.interval_regx.search(clip)
-            if interval_reg_result:
-                interval_str = interval_reg_result.group().replace("\x15", "")
-                curr_clip.timestamp = interval_str
-
-            time = interval_str.split("_")
-            time = [int(time[0]), int(time[1])]
-
-            final_time = self.ms_to_hhmmss(time)
-
-            curr_clip.start_time = str(final_time[0])
-            curr_clip.offset_time = str(final_time[2])
-
-            block.clips.append(curr_clip)
-
-        block.num_clips = len(block.clips)
-
-        #self.blocks_to_csv()
-
-        for clip in block.clips:
-            if clip.clip_tier == "FAN":
-                block.contains_fan_or_man = True
-            if clip.clip_tier == "MAN":
-                block.contains_fan_or_man = True
-
-        return block
 
     def create_block_from_zip(self, path_to_zip):
         # extract the zipped block
@@ -940,128 +670,10 @@ class MainWindow:
 
         return clip
 
-    def load_previous_block2(self, event):
-        selected_block = self.previous_block_menu.curselection()
-        randomized_index = int(self.previous_block_menu.get(selected_block[0])[1:6].strip())
-        #print self.previous_block_menu.get(selected_block[0])[1:6].strip()
-        self.load_block(randomized_index)
-
     def load_previous_block_downloaded(self, event):
         selected_block = self.previous_block_menu.curselection()
         index = int(selected_block[0])
         self.load_downloaded_block(index)
-
-    def load_previous_block(self):
-
-        if self.current_block_index is None:
-            self.current_block_index = 0
-        elif self.current_block_index == 0:
-            return
-        elif self.current_block_index == len(self.randomized_blocks):
-            print "That's the last block"
-        else:
-            #self.current_block_index -= 1
-            last_curr_block = self.loaded_block_history.index(self.current_block_index)
-            self.current_block_index = self.loaded_block_history[last_curr_block-1]
-
-        self.block_list.delete(0, END)
-
-        self.current_block = self.randomized_blocks[self.current_block_index]
-
-        self.slice_block(self.current_block)
-
-        for index, element in enumerate(self.randomized_blocks[self.current_block_index].clips):
-            if element.multiline:
-                self.block_list.insert(index, element.clip_tier+" ^--")
-            else:
-                self.block_list.insert(index, element.clip_tier)
-
-        self.coded_block_label = Label(self.main_frame, text="block #{}".format(self.current_block_index + 1))
-        self.coded_block_label.grid(row=26, column=3)
-
-        self.current_clip = self.current_block.clips[0]
-
-        self.block_list.selection_clear(0, END)
-        self.block_list.selection_set(0)
-
-        self.update_curr_clip_info()
-
-    def load_random_conv_block(self):
-
-        if not self.current_block:
-            self.current_block_index = 0
-            self.current_block = self.randomized_blocks[0]
-            self.on_first_block = True
-        else:
-            self.on_first_block = False
-
-        if self.block_condition_var.get() == 1:
-            if not self.on_first_block:
-                self.move_currblock_forward()
-                self.current_block = self.randomized_blocks[self.current_block_index]
-            while not self.current_block.contains_fan_or_man:
-                self.move_currblock_forward()
-                self.current_block = self.randomized_blocks[self.current_block_index]
-        else:
-            self.move_currblock_forward()
-            self.current_block = self.randomized_blocks[self.current_block_index]
-
-        self.block_list.delete(0, END)
-
-        if self.current_block_index not in self.loaded_block_history:
-            self.loaded_block_history.append((self.current_block_index, self.current_block.index))
-
-        self.sort_and_prune_block_history()
-
-        self.slice_block(self.current_block)
-
-        for index, element in enumerate(self.current_block.clips):
-            if element.multiline:
-                self.block_list.insert(index, element.clip_tier+" ^--")
-            else:
-                self.block_list.insert(index, element.clip_tier)
-
-        self.coded_block_label = Label(self.main_frame, text="block #{}".format(self.current_block_index + 1))
-        self.coded_block_label.grid(row=26, column=3)
-
-        self.current_clip = self.current_block.clips[0]
-
-        self.block_list.selection_clear(0, END)
-        self.block_list.selection_set(0)
-
-        self.update_curr_clip_info()
-
-    def sort_and_prune_block_history(self):
-        self.loaded_block_history = list(set(self.loaded_block_history))
-        self.loaded_block_history = sorted(self.loaded_block_history, key=itemgetter(0))
-
-        self.previous_block_menu.delete(0, END)
-        for index, element in enumerate(self.loaded_block_history):
-            self.previous_block_menu.insert(index, "#{:>5}:   block {:>6}".format(element[0]+1, element[1]))
-
-        self.previous_block_menu.see(self.previous_block_menu.size()-1)
-
-    def load_block(self, randomized_index):
-        self.current_block = self.randomized_blocks[randomized_index-1]
-        self.current_block_index = randomized_index
-
-        self.block_list.delete(0, END)
-
-        for index, element in enumerate(self.current_block.clips):
-            if element.multiline:
-                self.block_list.insert(index, element.clip_tier + " ^--")
-            else:
-                self.block_list.insert(index, element.clip_tier)
-
-        self.coded_block_label = Label(self.main_frame, text="block #{}".format(self.current_block_index + 1))
-        self.coded_block_label.grid(row=26, column=3)
-
-        self.current_clip = self.current_block.clips[0]
-
-        self.block_list.selection_clear(0, END)
-        self.block_list.selection_set(0)
-
-        self.update_curr_clip_info()
 
     def load_downloaded_block(self, block_index):
         self.dont_share_applied = False
@@ -1091,16 +703,6 @@ class MainWindow:
         self.dont_share_button.deselect()
 
         self.update_curr_clip_info()
-
-    def move_currblock_forward(self):
-        if self.current_block_index is None:
-            self.current_block_index = 0
-        elif self.current_block_index == len(self.randomized_blocks):
-            print "That's the last block"
-        else:
-            self.current_block_index = self.last_tried_block + 1
-            self.last_tried_block += 1
-            self.current_block = self.randomized_blocks[self.current_block_index]
 
     def update_curr_clip_info(self):
 
@@ -1257,14 +859,12 @@ class MainWindow:
         self.clip_directory = tkFileDialog.askdirectory()
         self.prev_downl_blocks = self.load_previously_downl_blocks()
         self.clip_blocks.extend(self.prev_downl_blocks)
-        #self.print_paths()
 
     def save_as_classifications(self, event):
         self.set_classification_output()
 
     def set_classification_output(self):
         self.classification_output = tkFileDialog.asksaveasfilename()
-        #self.print_paths()
 
     def save_classifications(self, event):
         self.output_classifications()
@@ -1297,14 +897,6 @@ class MainWindow:
                                  clip.timestamp, clip.clip_index,clip.clip_tier,
                                  clip.classification, clip.gender_label, dont_share])
 
-    def blocks_to_csv(self):
-
-        with open("blocks.csv", "wb") as file:
-            writer = csv.writer(file)
-            writer.writerow(["block", "num_clips"])
-            for block in self.clip_blocks:
-                writer.writerow([block.index, block.num_clips])
-
     def show_shortcuts(self):
         self.shortcuts_menu = Toplevel()
         self.shortcuts_menu.title("Shortcuts & Info")
@@ -1317,10 +909,7 @@ class MainWindow:
             "osf wiki:     https://osf.io/d9ac4/wiki/home/\n\n\n"
 
         general = "General Keys:\n\n"
-        load_audio      = "\tshift + a             : load audio file\n"
-        load_clan       = "\tshift + c             : load clan file\n"
         submit_block    = "\tshift + enter         : submit + save block\n"
-        load_prev_block = "\tshift + \             : load previous block\n"
         save_labels     = "\tcmd   + s             : save classifications     (Mac)\n"
         save_labels_win = "\tctrl  + s             : save classifications     (Linux/Windows)\n"
         save_as         = "\tcmd   + shift + s     : save as classifications  (Mac)\n"
@@ -1329,9 +918,6 @@ class MainWindow:
         classification = "\nClassification Keys:\n\n"
         ids        = "\tc : CDS\n"
         ads        = "\ta : ADS\n"
-        noise      = "\tn : Child Noises\n"
-        reg_switch = "\tr : Register Switch\n"
-        mult_addr  = "\tm : Multiple Addressee\n"
         junk       = "\tj : Junk\n\n"
 
         male       = "\tm : Male\n"
@@ -1348,10 +934,6 @@ class MainWindow:
 
         textbox.insert('1.0', welcome_message+\
                                 general+\
-                                #load_audio+\
-                                #load_clan+\
-                                #load_block+\
-                                #load_prev_block+\
                                 submit_block+\
                                 save_labels+\
                                 save_labels_win+\
@@ -1360,9 +942,6 @@ class MainWindow:
                                 classification+\
                                 ids+\
                                 ads+
-                                #noise+\
-                                #reg_switch+\
-                                #mult_addr+\
                                 junk+\
                                 male+\
                                 female+\
@@ -1419,44 +998,6 @@ class MainWindow:
             showwarning("Old Version",
                         "This isn't the latest version of IDSLabel\nGet the latest release from: "
                                        "\n\nhttps://github.com/SeedlingsBabylab/idslabel/releases")
-
-    def print_paths(self):
-        self.paths_text = Text(self.main_frame, width=65, pady=40)
-        self.paths_text.grid(row=28, column=0, rowspan=4, columnspan=2)
-
-        if not self.audio_file:
-            audiofile = None
-        else:
-            audiofile = os.path.split(self.audio_file)[1]
-
-        if not self.classification_output:
-            outputfile = None
-        else:
-            outputfile = os.path.split(self.classification_output)[1]
-
-        clipsdir = self.clip_directory
-
-        if audiofile:
-            audio_filepath =  "audio  file:        {}\n".format(audiofile)
-        else:
-            audio_filepath =  "audio  file:        {}\n".format("N/A")
-
-        if outputfile:
-            output_filepath = "output file:        {}\n".format(outputfile)
-        else:
-            output_filepath = "output file:        {}\n".format("N/A")
-
-        if clipsdir:
-            clips_dir =       "clips  directory:   {}\n".format(clipsdir)
-        else:
-            clips_dir =       "clips  directory:   {}\n".format("N/A")
-
-        self.paths_text.insert("1.0",
-                               #audio_filepath+\
-                               #output_filepath+\
-                               clips_dir)
-
-        self.paths_text.configure(state="disabled")
 
     def get_blocks(self):
         if not self.clip_directory:
@@ -1915,6 +1456,7 @@ class MainWindow:
         block_data = None
         if resp.ok:
             block_data = json.loads(resp.content)
+            print block_data
             self.curr_past_block = self.json_to_block(block_data)
             self.load_block_lab_info()
         else:
@@ -2325,8 +1867,6 @@ class MainWindow:
             self.send_back_block_list.insert(index, block_string)
 
     def send_back(self):
-
-
         selections = self.send_back_block_list.curselection()
         selection_ids = []
         selection_blocks = []
