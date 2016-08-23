@@ -20,8 +20,10 @@ import tkFileDialog
 import tkSimpleDialog
 from tkMessageBox import showwarning, askyesno
 
+from distutils.version import LooseVersion
 
-version = "0.0.9"
+
+version = "1.0.0"
 
 
 get_block_url = ""
@@ -358,6 +360,7 @@ class MainWindow:
         self.lab_data = None
         self.past_work_item_data = []
         self.curr_past_block = None
+        self.curr_past_block_group = None
         self.curr_lab_info_clip = None
         self.lab_users = []
 
@@ -982,19 +985,9 @@ class MainWindow:
 
         json_response =  json.loads(resp.read())
 
-        git_version = json_response[0]["name"]
-        split_version = git_version[1:].split(".")
+        git_version = json_response[0]["name"][1:]
 
-        split_version = map(int, split_version)
-        int_this_version = map(int, version.split("."))
-
-        less = False
-        for index, num in enumerate(int_this_version):
-            if num < split_version[index]:
-                less = True
-                break
-
-        if less:
+        if LooseVersion(git_version) > LooseVersion(version):
             showwarning("Old Version",
                         "This isn't the latest version of IDSLabel\nGet the latest release from: "
                                        "\n\nhttps://github.com/SeedlingsBabylab/idslabel/releases")
@@ -1056,16 +1049,19 @@ class MainWindow:
     def get_lab_info(self):
         self.lab_info_page = Toplevel()
         self.lab_info_page.title("Lab Info")
-        self.lab_info_page.geometry("1057x400")
+        self.lab_info_page.geometry("1157x400")
 
         users_label = Label(self.lab_info_page, text="Users")
         users_label.grid(row=0, column=0)
 
-        work_item_label = Label(self.lab_info_page, text="Active Blocks")
-        work_item_label.grid(row=0, column=1)
+        act_work_item_label = Label(self.lab_info_page, text="Active Blocks")
+        act_work_item_label.grid(row=0, column=1)
 
-        work_item_label = Label(self.lab_info_page, text="Finished Blocks")
-        work_item_label.grid(row=0, column=2)
+        fin_work_item_label = Label(self.lab_info_page, text="Finished Blocks")
+        fin_work_item_label.grid(row=0, column=2)
+
+        block_attempt_label = Label(self.lab_info_page, text="Attempt #")
+        block_attempt_label.grid(row=0, column=3)
 
 
         self.lab_info_user_box = Listbox(self.lab_info_page, width=15, height=20)
@@ -1075,32 +1071,35 @@ class MainWindow:
         self.lab_info_user_work_box = Listbox(self.lab_info_page, width=22, height=20)
         self.lab_info_user_work_box.grid(row=1, column=1, rowspan=9)
 
-
         self.lab_info_user_past_work_box = Listbox(self.lab_info_page, width=22, height=20)
         self.lab_info_user_past_work_box.grid(row=1, column=2, rowspan=9)
         self.lab_info_user_past_work_box.bind('<<ListboxSelect>>', self.get_labels)
 
+        self.lab_info_user_past_work_attempt_box = Listbox(self.lab_info_page, width=5, height=20)
+        self.lab_info_user_past_work_attempt_box.grid(row=1, column=3, rowspan=9)
+        self.lab_info_user_past_work_attempt_box.bind('<<ListboxSelect>>', self.load_block_attempt)
+
         self.lab_info_past_work_box = Listbox(self.lab_info_page, width=10, height=20)
-        self.lab_info_past_work_box.grid(row=1, column=3, rowspan=9)
+        self.lab_info_past_work_box.grid(row=1, column=4, rowspan=9)
         self.lab_info_past_work_box.bind('<<ListboxSelect>>', self.update_lab_info_curr_clip)
 
         self.lab_info_past_work_info = Text(self.lab_info_page, width=36, height=20)
-        self.lab_info_past_work_info.grid(row=1, column=4, rowspan=9)
+        self.lab_info_past_work_info.grid(row=1, column=5, rowspan=9)
 
         save_this_block_button = Button(self.lab_info_page, text="Save This Block", command=self.lab_info_save_this_block)
-        save_this_block_button.grid(row=0, column=5)
+        save_this_block_button.grid(row=0, column=6)
 
         save_all_lab_blocks_button = Button(self.lab_info_page, text="Save Lab Blocks", command=self.lab_info_save_lab_blocks)
-        save_all_lab_blocks_button.grid(row=1, column=5, )
+        save_all_lab_blocks_button.grid(row=1, column=6, )
 
         save_all_blocks_button = Button(self.lab_info_page, text="Save All Blocks", command=self.lab_info_save_all_blocks)
-        save_all_blocks_button.grid(row=2, column=5)
+        save_all_blocks_button.grid(row=2, column=6)
 
         save_training_blocks_button = Button(self.lab_info_page, text="Save Training Blocks", command=self.lab_info_save_training_blocks)
-        save_training_blocks_button.grid(row=3, column=5)
+        save_training_blocks_button.grid(row=3, column=6)
 
         save_reliability_blocks_button = Button(self.lab_info_page, text="Save Reliability Blocks", command=self.lab_info_save_reliability_blocks)
-        save_reliability_blocks_button.grid(row=4, column=5)
+        save_reliability_blocks_button.grid(row=4, column=6)
 
         # save_user_training_blocks_button = Button(self.lab_info_page, text="Save User Train Blocks",
         #                                          command=self.lab_info_save_training_blocks)
@@ -1457,11 +1456,32 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
             print block_data
-            self.curr_past_block = self.json_to_block(block_data)
+            self.curr_past_block_group = [self.json_to_block(block) for block in block_data]
+            self.curr_past_block = self.curr_past_block_group[0]
+            self.fill_attempt_list_lab_info()
             self.load_block_lab_info()
         else:
             showwarning("Bad Request", "Server: {}".format(resp.content))
             return
+
+    def fill_attempt_list_lab_info(self):
+        self.lab_info_user_past_work_attempt_box.delete(0, END)
+
+        for index, block in enumerate(self.curr_past_block_group):
+            self.lab_info_user_past_work_attempt_box.insert(index, str(index+1))
+
+    def load_block_attempt(self, evt):
+        box = evt.widget
+        index = int(box.curselection()[0])
+
+        attempt_num = int(box.get(index)) - 1
+
+        if not lab_info_url:
+            self.parse_config()
+
+        self.curr_past_block = self.curr_past_block_group[attempt_num]
+
+        self.load_block_lab_info()
 
     def load_block_lab_info(self):
 
