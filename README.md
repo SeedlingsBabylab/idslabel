@@ -73,10 +73,11 @@ $: sudo pip install pyaudio
  - c : CDS
  - a : ADS
  - j : Junk
- 
+
  - m : MALE
  - f : FEMALE
  - u : UNCLEAR
+
 
 - Clip Keys
  - up : previous clip

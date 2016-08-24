@@ -27,6 +27,7 @@ version = "1.0.0"
 
 
 get_block_url = ""
+delete_block_url = ""
 lab_info_url = ""
 all_lab_info_url = ""
 add_user_url = ""
@@ -196,10 +197,6 @@ class MainWindow:
         self.main_frame.bind("<FocusOut>", self.reset_frame_focus)
 
         self.main_frame.pack()
-
-        self.load_audio_button = Button(self.main_frame,
-                                           text= "Load Audio",
-                                           command=self.load_audio)
 
         self.play_clip_button = Button(self.main_frame,
                                        text="Play Clip",
@@ -473,9 +470,6 @@ class MainWindow:
             block.clips[clip_index].multiline = True
             block.clips[clip_index].multi_tier_parent = entry[9]
 
-    def load_audio(self):
-        self.audio_file = tkFileDialog.askopenfilename()
-
     def play_clip(self):
         current_clip = self.block_list.curselection()
         clip_index = int(current_clip[0])
@@ -687,11 +681,6 @@ class MainWindow:
         self.block_list.delete(0, END)
 
         for index, element in enumerate(self.current_block.clips):
-            # if element.multiline:
-            #     self.block_list.insert(index, element.clip_tier + " ^--")
-            #     if element.clip_tier not in ["FAN", "MAN"]:
-            #         self.block_list.itemconfig(index, fg="grey")
-            # else:
             self.block_list.insert(index, element.clip_tier)
             if element.clip_tier not in ["FAN", "MAN"]:
                 self.block_list.itemconfig(index, fg="grey", selectforeground="grey")
@@ -789,7 +778,6 @@ class MainWindow:
         self.curr_clip_info.configure(state="disabled")
 
     def next_clip(self):
-
         if self.current_clip.clip_index == len(self.current_block.clips):
             return
         self.block_list.selection_clear(0, END)
@@ -802,7 +790,6 @@ class MainWindow:
         self.block_list.see(self.current_clip.clip_index-1)
 
     def previous_clip(self):
-
         if self.current_clip.clip_index == 1:
             return
 
@@ -839,7 +826,6 @@ class MainWindow:
         self.update_curr_clip_info()
 
     def ms_to_hhmmss(self, interval):
-
         x_start = datetime.timedelta(milliseconds= interval[0])
         x_end = datetime.timedelta(milliseconds=interval[1])
 
@@ -874,14 +860,13 @@ class MainWindow:
         self.output_classifications()
 
     def output_classifications(self):
-
-        #[date, coder, clanfile, audiofile, block, timestamp, clip, tier, label, multi-tier]
+        # ["date", "coder", "lab_name", "clan_file", "audiofile", "block", "timestamp", "clip", "tier", "label", "gender", "dont_share"]
         if not self.classification_output:
             self.classification_output = tkFileDialog.asksaveasfilename()
 
         with open(self.classification_output, "wb") as output:
             writer = csv.writer(output)
-            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
+            writer.writerow(["date", "coder", "lab_name", "clan_file", "audiofile", "block",
                              "timestamp", "clip", "tier", "label", "gender", "dont_share"])
 
             block = self.current_block
@@ -889,14 +874,9 @@ class MainWindow:
             if block.dont_share:
                 dont_share = True
 
-            multitier_parent = None
             for clip in block.clips:
-                # if clip.multiline:
-                #     multitier_parent = clip.multi_tier_parent
-                # else:
-                #     multitier_parent = "N"
 
-                writer.writerow([clip.label_date, clip.coder, clip.clan_file,
+                writer.writerow([clip.label_date, clip.coder, self.lab_name, clip.clan_file,
                                  clip.parent_audio_path, clip.block_index,
                                  clip.timestamp, clip.clip_index,clip.clip_tier,
                                  clip.classification, clip.gender_label, dont_share])
@@ -1008,7 +988,6 @@ class MainWindow:
 
         if error_response:
             showwarning("Bad Request", "Server: " + error_response)
-            #return
 
         self.load_downloaded_blocks()
 
@@ -1044,7 +1023,6 @@ class MainWindow:
 
             block = self.create_block_from_zip(output_path)
 
-            #print block
             self.clip_blocks.append(block)
 
     def get_lab_info(self):
@@ -1090,17 +1068,20 @@ class MainWindow:
         save_this_block_button = Button(self.lab_info_page, text="Save This Block", command=self.lab_info_save_this_block)
         save_this_block_button.grid(row=0, column=6)
 
+        delete_this_block_button = Button(self.lab_info_page, text="Delete This Block", command=self.lab_info_delete_this_block)
+        delete_this_block_button.grid(row=1, column=6)
+
         save_all_lab_blocks_button = Button(self.lab_info_page, text="Save Lab Blocks", command=self.lab_info_save_lab_blocks)
-        save_all_lab_blocks_button.grid(row=1, column=6, )
+        save_all_lab_blocks_button.grid(row=2, column=6, )
 
         save_all_blocks_button = Button(self.lab_info_page, text="Save All Blocks", command=self.lab_info_save_all_blocks)
-        save_all_blocks_button.grid(row=2, column=6)
+        save_all_blocks_button.grid(row=3, column=6)
 
         save_training_blocks_button = Button(self.lab_info_page, text="Save Training Blocks", command=self.lab_info_save_training_blocks)
-        save_training_blocks_button.grid(row=3, column=6)
+        save_training_blocks_button.grid(row=4, column=6)
 
         save_reliability_blocks_button = Button(self.lab_info_page, text="Save Reliability Blocks", command=self.lab_info_save_reliability_blocks)
-        save_reliability_blocks_button.grid(row=4, column=6)
+        save_reliability_blocks_button.grid(row=5, column=6)
 
         # save_user_training_blocks_button = Button(self.lab_info_page, text="Save User Train Blocks",
         #                                          command=self.lab_info_save_training_blocks)
@@ -1126,7 +1107,6 @@ class MainWindow:
 
         payload = {"lab-key": self.lab_key}
 
-
         resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
 
         if resp.ok:
@@ -1149,9 +1129,6 @@ class MainWindow:
             self.all_lab_info_user_box.insert(i, user["name"])
             i += 1
 
-
-        print "index: {}".format(index)
-
     def update_curr_user(self, evt):
         box = evt.widget
         index = int(box.curselection()[0])
@@ -1159,19 +1136,15 @@ class MainWindow:
         self.lab_info_curr_user = box.get(index)
         user_data = self.lab_data["users"][str(self.lab_info_curr_user)]
 
-
         self.lab_info_user_work_box.delete(0, END)
         if user_data["active-work-items"]:
             for index, item_id in enumerate(user_data["active-work-items"]):
                 self.lab_info_user_work_box.insert(index, item_id)
 
-
-
         self.lab_info_user_past_work_box.delete(0, END)
         if user_data["finished-work-items"]:
             for index, item_id in enumerate(user_data["finished-work-items"]):
                 self.lab_info_user_past_work_box.insert(index, item_id)
-
 
     def add_user_to_server(self):
         name = tkSimpleDialog.askstring(title="Add User",
@@ -1189,6 +1162,7 @@ class MainWindow:
 
     def parse_config(self):
         global get_block_url
+        global delete_block_url
         global lab_info_url
         global all_lab_info_url
         global add_user_url
@@ -1201,7 +1175,6 @@ class MainWindow:
         global get_relia_labels_url
         global send_back_blocks_url
 
-
         showwarning("Config File", "Please choose a config.json file to load")
         config_path = tkFileDialog.askopenfilename()
 
@@ -1212,6 +1185,7 @@ class MainWindow:
             self.lab_name = config["lab-name"]
 
             get_block_url = config["server-urls"]["get_block_url"]
+            delete_block_url = config["server-urls"]["delete_block_url"]
             lab_info_url = config["server-urls"]["lab_info_url"]
             all_lab_info_url = config["server-urls"]["all_lab_info_url"]
             add_user_url = config["server-urls"]["add_user_url"]
@@ -1264,7 +1238,6 @@ class MainWindow:
             self.load_downloaded_block(0)
 
     def submit_block_and_save(self):
-
         if not self.dont_share_applied:
             result = askyesno("Personal Information", "Is block ok to share?")
             if result:
@@ -1278,17 +1251,14 @@ class MainWindow:
                 self.current_block.dont_share = False
             else:
                 self.current_block.dont_share = True
-
         if not self.session_output_file:
             showwarning("Set Output File", "Please choose a csv file to save this session's blocks to")
             self.session_output_file = tkFileDialog.asksaveasfilename()
-
             if os.path.isfile(self.session_output_file):
                 if not os.stat(self.session_output_file).st_size == 0:
                     showwarning("Nonempty Output File", "Please choose a new csv file. This file already has data from a previous session in it.")
                     self.session_output_file = None
                     return
-
         # check that the current block is completed before submitting
         block = self.current_block
 
@@ -1302,7 +1272,6 @@ class MainWindow:
                         continue
                     else:
                         unfinished_clips.append(clip)
-
         if not unfinished_clips:
             self.write_block_to_session_out(block)
             self.submit_block()
@@ -1320,16 +1289,13 @@ class MainWindow:
             showwarning("Incomplete Blocks", "You haven't finished some of the blocks\n\n"+
                         "blocks #: "+ incomplete_blocks + "\n\n" + "Only sending completed blocks")
 
-
         for block in blocks[0]:
             block.username = self.codername_entry.get()
             submission = block.to_dict()
             resp = requests.post(submit_labels_url, json=submission, allow_redirects=False)
-
             if resp.status_code != 200:
                 showwarning("Bad Request", "Server: " + resp.content)
                 return
-
             if resp.ok:
                 print "everything is ok"
                 self.cleanup_block_data(block)
@@ -1341,7 +1307,6 @@ class MainWindow:
         self.load_downloaded_block(0)
 
     def labels_to_json(self):
-
         blocks = {}
         blocks["blocks"] = {}
 
@@ -1351,7 +1316,6 @@ class MainWindow:
         for block in self.clip_blocks:
             for clip in block.clips:
                 blocks["blocks"][block.id].append(clip.to_dict())
-
         return blocks
 
     def get_completed_blocks(self):
@@ -1365,12 +1329,10 @@ class MainWindow:
                         unfinished_clips.append(clip)
                     if not clip.gender_label:
                         unfinished_clips.append(clip)
-
             if len(unfinished_clips) > 0:
                 incomplete_blocks.append(block)
             else:
                 completed_blocks.append(block)
-
         return (completed_blocks, incomplete_blocks)
 
     def load_downloaded_blocks(self):
@@ -1386,9 +1348,7 @@ class MainWindow:
 
     def load_previously_downl_blocks(self):
         blocks = []
-
         self.lab_info_ping()
-
         user = self.codername_entry.get()
 
         if not self.lab_data:
@@ -1432,7 +1392,6 @@ class MainWindow:
         self.num_blocks_to_get = int(self.block_request_num_entry.get())
 
     def cleanup_block_data(self, block):
-        #print block
         clips_path = ""
         for clip in block.clips:
             os.remove(clip.audio_path)
@@ -1462,7 +1421,6 @@ class MainWindow:
         block_data = None
         if resp.ok:
             block_data = json.loads(resp.content)
-            #print block_data
             self.curr_past_block_group = [self.json_to_block(block) for block in block_data]
             self.curr_past_block = self.curr_past_block_group[0]
             self.fill_attempt_list_lab_info()
@@ -1491,7 +1449,6 @@ class MainWindow:
         self.load_block_lab_info()
 
     def load_block_lab_info(self):
-
         self.lab_info_past_work_box.delete(0, END)
 
         for index, element in enumerate(self.curr_past_block.clips):
@@ -1586,7 +1543,6 @@ class MainWindow:
     def update_lab_info_curr_clip_initial(self):
         self.lab_info_past_work_box.selection_set(0)
         self.curr_lab_info_clip = self.curr_past_block.clips[0]
-        #work_item = box.get(index)
 
         self.lab_info_past_work_info.configure(state="normal")
         self.lab_info_past_work_info.delete("1.0", END)
@@ -1681,6 +1637,20 @@ class MainWindow:
                                  clip.classification, clip.gender_label, dont_share,
                                  block.training, block.reliability])
 
+    def lab_info_delete_this_block(self):
+
+        if not self.lab_key:
+            showwarning("Load Config", "You need to load the config.json first")
+            return
+
+        payload = {"lab-key": self.lab_key}
+
+        resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
+
+        block_data = None
+        if resp.ok:
+            block_data = json.loads(resp.content)
+
     def lab_info_save_lab_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
 
@@ -1696,13 +1666,11 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
 
-        #print block_data
         blocks = []
         for block in block_data:
             blocks.append(self.json_to_block(block))
 
         self.save_blocks_to_csv(blocks, output_path)
-
 
     def lab_info_save_all_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -1719,14 +1687,12 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
 
-        #print block_data
         blocks = []
         for block_group in block_data:
             for block in block_group["blocks"]:
                 blocks.append(self.json_to_block(block))
 
         self.save_blocks_to_csv(blocks, output_path)
-
 
     def lab_info_save_training_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -1743,13 +1709,11 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
 
-        #print block_data
         blocks = []
         for block in block_data:
             blocks.append(self.json_to_block(block))
 
         self.save_blocks_to_csv(blocks, output_path)
-
 
     def lab_info_save_reliability_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -1766,13 +1730,11 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
 
-        #print block_data
         blocks = []
         for block in block_data:
             blocks.append(self.json_to_block(block))
 
         self.save_blocks_to_csv(blocks, output_path)
-
 
     def json_to_block(self, block_json):
 
@@ -1859,8 +1821,6 @@ class MainWindow:
 
         resp = requests.post(send_back_blocks_url, json=payload, allow_redirects=False)
 
-        #print payload
-
         for block in selection_blocks:
             self.cleanup_block_data(block)
             block_index = self.clip_blocks.index(block)
@@ -1919,7 +1879,6 @@ class MainWindow:
 
         if error_response:
             showwarning("Bad Request", "Server: " + error_response)
-            # return
 
         self.load_downloaded_blocks()
 
@@ -1956,7 +1915,6 @@ class MainWindow:
 
             block = self.create_block_from_zip(output_path)
 
-            #print block
             self.clip_blocks.append(block)
 
     def get_reliability_blocks(self):
@@ -1974,7 +1932,6 @@ class MainWindow:
 
         if error_response:
             showwarning("Bad Request", "Server: " + error_response)
-            # return
 
         self.load_downloaded_blocks()
 
@@ -2011,7 +1968,6 @@ class MainWindow:
 
             block = self.create_block_from_zip(output_path)
 
-            #print block
             self.clip_blocks.append(block)
 
     def save_blocks_to_csv(self, blocks, output_path):
