@@ -8,10 +8,9 @@ Note: This is a work in progress.
 
 ## requirements
 
-This application depends on FFmpeg, PortAudio and PyAudio.
+This application depends on PortAudio and PyAudio.
 
-#### ffmpeg
-To install the ffmpeg binary, download from [here](https://www.ffmpeg.org/download.html). OS specific binaries are under the "Get the packages" section. The binary should be put in the same directory as the idslabel.py file.
+If you're downloading the prebuilt standalone Mac App from the [releases page](https://github.com/SeedlingsBabylab/idslabel/releases), you can ignore these requirements.
 
 #### portaudio
 To install PortAudio, the easiest way is to use your operating system's package manager.
@@ -73,10 +72,11 @@ $: sudo pip install pyaudio
 - Classification Keys
  - c : CDS
  - a : ADS
- - n : Child Noises
- - m : Multiple Addressee
- - r : Register Switch
  - j : Junk
+ 
+ - m : MALE
+ - f : FEMALE
+ - u : UNCLEAR
 
 - Clip Keys
  - up : previous clip
@@ -85,17 +85,3 @@ $: sudo pip install pyaudio
  - right         : next clip
  - space         : play clip
  - shift + space : play whole block
-
-
-
-Tiers which are composed of multiple lines, e.g. :
-```
-*CHN:	0 2662230_2662370
-  &=vocalization 2662370_2663380
-  0 . 2663380_2663480
-```
-have a symbol associated with them to signify they're part of the unit ( " ^-- " , it's supposed to be an arrow pointing to the parent tier)
-
-In the classification output, if clips are associated together as part of a multi-line tier, the value in the "multi-tier"
-column will be the timestamp of the parent line that they're associated to. In the example provided above, the line with
-the timestamp of 2662230_2662370 will be the parent to the following 2 lines.

@@ -14,7 +14,7 @@ OPTIONS = {'argv_emulation': True,
                'CFBundleIconFile': 'idslabel.icns'
                 }
            }
-VERSION="0.0.7"
+VERSION="1.0.0"
 
 setup(
     app=APP,

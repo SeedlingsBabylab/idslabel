@@ -43,6 +43,7 @@ class Block:
     def __init__(self, index, clan_file):
 
         self.index = index
+        self.instance = 0
         self.clan_file = clan_file
         self.num_clips = None
         self.clips = []
@@ -1227,6 +1228,7 @@ class MainWindow:
         block = self.current_block
 
         block.username = self.codername_entry.get()
+        block.lab_name = self.lab_name
 
         unfinished_clips = []
         for clip in block.clips:
@@ -1696,27 +1698,11 @@ class MainWindow:
 
         #print block_data
         blocks = []
-        for block in block_data["blocks"]:
+        for block in block_data:
             blocks.append(self.json_to_block(block))
 
-        with open(output_path, "wb") as out:
-            writer = csv.writer(out)
+        self.save_blocks_to_csv(blocks, output_path)
 
-            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender",
-                             "dont_share", "training", "reliability"])
-
-            for block in blocks:
-                dont_share = False
-                if block.dont_share:
-                    dont_share = True
-
-                for clip in block.clips:
-                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
-                                     clip.parent_audio_path, clip.block_index,
-                                     clip.timestamp, clip.clip_index, clip.clip_tier,
-                                     clip.classification, clip.gender_label, dont_share,
-                                     block.training, block.reliability])
 
     def lab_info_save_all_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -1735,27 +1721,12 @@ class MainWindow:
 
         #print block_data
         blocks = []
-        for block in block_data["blocks"]:
-            blocks.append(self.json_to_block(block))
+        for block_group in block_data:
+            for block in block_group["blocks"]:
+                blocks.append(self.json_to_block(block))
 
-        with open(output_path, "wb") as out:
-            writer = csv.writer(out)
+        self.save_blocks_to_csv(blocks, output_path)
 
-            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender",
-                             "dont_share", "training", "reliability"])
-
-            for block in blocks:
-                dont_share = False
-                if block.dont_share:
-                    dont_share = True
-
-                for clip in block.clips:
-                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
-                                     clip.parent_audio_path, clip.block_index,
-                                     clip.timestamp, clip.clip_index, clip.clip_tier,
-                                     clip.classification, clip.gender_label, dont_share,
-                                     block.training, block.reliability])
 
     def lab_info_save_training_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -1774,27 +1745,11 @@ class MainWindow:
 
         #print block_data
         blocks = []
-        for block in block_data["blocks"]:
+        for block in block_data:
             blocks.append(self.json_to_block(block))
 
-        with open(output_path, "wb") as out:
-            writer = csv.writer(out)
+        self.save_blocks_to_csv(blocks, output_path)
 
-            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender", "dont_share", "training", "reliability"])
-
-
-            for block in blocks:
-                dont_share = False
-                if block.dont_share:
-                    dont_share = True
-
-                for clip in block.clips:
-                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
-                                     clip.parent_audio_path, clip.block_index,
-                                     clip.timestamp, clip.clip_index, clip.clip_tier,
-                                     clip.classification, clip.gender_label, dont_share,
-                                     block.training, block.reliability])
 
     def lab_info_save_reliability_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -1813,31 +1768,18 @@ class MainWindow:
 
         #print block_data
         blocks = []
-        for block in block_data["blocks"]:
+        for block in block_data:
             blocks.append(self.json_to_block(block))
 
-        with open(output_path, "wb") as out:
-            writer = csv.writer(out)
+        self.save_blocks_to_csv(blocks, output_path)
 
-            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender", "dont_share", "training", "reliability"])
-
-            for block in blocks:
-                dont_share = False
-                if block.dont_share:
-                    dont_share = True
-
-                for clip in block.clips:
-                    writer.writerow([clip.label_date, clip.coder, clip.clan_file,
-                                     clip.parent_audio_path, clip.block_index,
-                                     clip.timestamp, clip.clip_index, clip.clip_tier,
-                                     clip.classification, clip.gender_label, dont_share,
-                                     block.training, block.reliability])
 
     def json_to_block(self, block_json):
 
         block = Block(block_json["block-index"], block_json["clan-file"])
+        block.instance = block_json["block-instance"]
         block.dont_share = block_json["dont-share"]
+        block.lab_name = block_json["lab-name"]
 
         block.training = block_json["training"]
         block.reliability = block_json["reliability"]
@@ -2069,9 +2011,29 @@ class MainWindow:
 
             block = self.create_block_from_zip(output_path)
 
-            print block
+            #print block
             self.clip_blocks.append(block)
 
+    def save_blocks_to_csv(self, blocks, output_path):
+
+        with open(output_path, "wb") as out:
+            writer = csv.writer(out)
+
+            writer.writerow(["date", "coder", "lab_name", "clan_file", "audiofile", "block", "instance",
+                             "timestamp", "clip", "tier", "label", "gender",
+                             "dont_share", "training", "reliability"])
+
+            for block in blocks:
+                dont_share = False
+                if block.dont_share:
+                    dont_share = True
+
+                for clip in block.clips:
+                    writer.writerow([clip.label_date, clip.coder, block.lab_name, clip.clan_file,
+                                     clip.parent_audio_path, clip.block_index, block.instance,
+                                     clip.timestamp, clip.clip_index, clip.clip_tier,
+                                     clip.classification, clip.gender_label, dont_share,
+                                     block.training, block.reliability])
 
 
 if __name__ == "__main__":
