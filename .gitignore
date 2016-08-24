@@ -4,3 +4,10 @@
 dist
 build
 ffmpeg
+include
+.eggs
+.tags
+blocks
+configs
+*.spec
+*.csv

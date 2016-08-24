@@ -1043,7 +1043,7 @@ class MainWindow:
 
             block = self.create_block_from_zip(output_path)
 
-            print block
+            #print block
             self.clip_blocks.append(block)
 
     def get_lab_info(self):
@@ -1158,19 +1158,19 @@ class MainWindow:
         self.lab_info_curr_user = box.get(index)
         user_data = self.lab_data["users"][str(self.lab_info_curr_user)]
 
-        i = 0
+
         self.lab_info_user_work_box.delete(0, END)
         if user_data["active-work-items"]:
-            for item in user_data["active-work-items"]:
-                self.lab_info_user_work_box.insert(i, item["id"])
-                i += 1
+            for index, item_id in enumerate(user_data["active-work-items"]):
+                self.lab_info_user_work_box.insert(index, item_id)
 
-        i = 0
+
+
         self.lab_info_user_past_work_box.delete(0, END)
         if user_data["finished-work-items"]:
-            for item in user_data["finished-work-items"]:
-                self.lab_info_user_past_work_box.insert(i, item["id"])
-                i += 1
+            for index, item_id in enumerate(user_data["finished-work-items"]):
+                self.lab_info_user_past_work_box.insert(index, item_id)
+
 
     def add_user_to_server(self):
         name = tkSimpleDialog.askstring(title="Add User",
@@ -1182,6 +1182,9 @@ class MainWindow:
                    "username": name}
 
         resp = requests.post(add_user_url, json=payload, allow_redirects=False)
+
+        if not resp.ok:
+            print resp.content
 
     def parse_config(self):
         global get_block_url
@@ -1245,7 +1248,7 @@ class MainWindow:
                 return
 
             if resp.ok:
-                print "everything is ok"
+                print "block: {}:::{}  sent back to the server".format(block.clan_file, block.index)
                 self.cleanup_block_data(block)
                 block_index = self.clip_blocks.index(block)
                 del self.clip_blocks[block_index]
@@ -1406,6 +1409,9 @@ class MainWindow:
                     zipfile = os.path.join(root, zips[0])
                     block = self.create_block_from_clips(zipfile)
                     block.old = True
+                    root_basename = os.path.basename(root)
+                    if user not in root_basename:
+                        continue
                     if self.block_belongs_to_user(block, user_active_blocks):
                         blocks.append(block)
 
@@ -1415,9 +1421,8 @@ class MainWindow:
         if user_active_items is None:
             return False
 
-        for element in user_active_items:
-            if element["id"] == block.id:
-                return True
+        if block.id in user_active_items:
+            return True
         return False
 
     def enter_block_request_num(self, event):
@@ -1425,7 +1430,7 @@ class MainWindow:
         self.num_blocks_to_get = int(self.block_request_num_entry.get())
 
     def cleanup_block_data(self, block):
-        print block
+        #print block
         clips_path = ""
         for clip in block.clips:
             os.remove(clip.audio_path)
@@ -1455,7 +1460,7 @@ class MainWindow:
         block_data = None
         if resp.ok:
             block_data = json.loads(resp.content)
-            print block_data
+            #print block_data
             self.curr_past_block_group = [self.json_to_block(block) for block in block_data]
             self.curr_past_block = self.curr_past_block_group[0]
             self.fill_attempt_list_lab_info()
@@ -1689,7 +1694,7 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
 
-        print block_data
+        #print block_data
         blocks = []
         for block in block_data["blocks"]:
             blocks.append(self.json_to_block(block))
@@ -1728,7 +1733,7 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
 
-        print block_data
+        #print block_data
         blocks = []
         for block in block_data["blocks"]:
             blocks.append(self.json_to_block(block))
@@ -1767,7 +1772,7 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
 
-        print block_data
+        #print block_data
         blocks = []
         for block in block_data["blocks"]:
             blocks.append(self.json_to_block(block))
@@ -1806,7 +1811,7 @@ class MainWindow:
         if resp.ok:
             block_data = json.loads(resp.content)
 
-        print block_data
+        #print block_data
         blocks = []
         for block in block_data["blocks"]:
             blocks.append(self.json_to_block(block))
@@ -1912,7 +1917,7 @@ class MainWindow:
 
         resp = requests.post(send_back_blocks_url, json=payload, allow_redirects=False)
 
-        print payload
+        #print payload
 
         for block in selection_blocks:
             self.cleanup_block_data(block)
@@ -2009,7 +2014,7 @@ class MainWindow:
 
             block = self.create_block_from_zip(output_path)
 
-            print block
+            #print block
             self.clip_blocks.append(block)
 
     def get_reliability_blocks(self):
