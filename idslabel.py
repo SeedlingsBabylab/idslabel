@@ -83,6 +83,8 @@ class Block:
 
         return block
 
+    def block_id(self):
+        return "{}:::{}".format(self.clan_file, self.index)
 
 class Clip:
     def __init__(self, path, block_index, clip_index):
@@ -1005,7 +1007,6 @@ class MainWindow:
             return resp.content
 
         if resp.ok:
-
             params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
             filename = params[1]['filename']
             file_end = os.path.basename(filename)
@@ -1014,7 +1015,6 @@ class MainWindow:
 
             if not os.path.exists(block_path):
                 os.makedirs(block_path)
-
 
             output_path = os.path.join(block_path, file_end)
 
@@ -1146,10 +1146,29 @@ class MainWindow:
             for index, item_id in enumerate(user_data["finished-work-items"]):
                 self.lab_info_user_past_work_box.insert(index, item_id)
 
+    def update_curr_user_refresh(self):
+        self.lab_info_ping()
+
+        user_data = self.lab_data["users"][str(self.lab_info_curr_user)]
+
+        self.lab_info_user_work_box.delete(0, END)
+        if user_data["active-work-items"]:
+            for index, item_id in enumerate(user_data["active-work-items"]):
+                self.lab_info_user_work_box.insert(index, item_id)
+
+        self.lab_info_user_past_work_box.delete(0, END)
+        if user_data["finished-work-items"]:
+            for index, item_id in enumerate(user_data["finished-work-items"]):
+                self.lab_info_user_past_work_box.insert(index, item_id)
+
+
     def add_user_to_server(self):
         name = tkSimpleDialog.askstring(title="Add User",
                                         prompt="Username:",
                                         initialvalue=self.codername_entry.get())
+
+        if not name:
+            return
 
         payload = {"lab-key": self.lab_key,
                    "lab-name": self.lab_name,
@@ -1643,13 +1662,36 @@ class MainWindow:
             showwarning("Load Config", "You need to load the config.json first")
             return
 
-        payload = {"lab-key": self.lab_key}
+        payload = {"lab-key": self.lab_key,
+                   "coder": self.curr_past_block.coder,
+                   "block-id": self.curr_past_block.block_id(),
+                   "delete-type": "single",
+                   "instance": self.curr_past_block.instance}
 
         resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
 
-        block_data = None
-        if resp.ok:
-            block_data = json.loads(resp.content)
+        if not resp.ok:
+            print resp.content
+        else:
+            self.update_curr_user_refresh()
+
+    def lab_info_delete_users_block(self):
+        if not self.lab_key:
+            showwarning("Load Config", "You need to load the config.json first")
+            return
+
+        instance_map = {}
+
+        payload = {"lab-key": self.lab_key,
+                   "coder": self.curr_past_block.coder,
+                   "block-id": self.curr_past_block.block_id(),
+                   "delete-type": "user",
+                   "instance": self.curr_past_block.instance}
+
+        resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
+
+        if not resp.ok:
+            print resp.content
 
     def lab_info_save_lab_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -1742,6 +1784,7 @@ class MainWindow:
         block.instance = block_json["block-instance"]
         block.dont_share = block_json["dont-share"]
         block.lab_name = block_json["lab-name"]
+        block.coder = block_json["coder"]
 
         block.training = block_json["training"]
         block.reliability = block_json["reliability"]
