@@ -1161,6 +1161,16 @@ class MainWindow:
             for index, item_id in enumerate(user_data["finished-work-items"]):
                 self.lab_info_user_past_work_box.insert(index, item_id)
 
+        if user_data["finished-work-items"] and \
+           self.curr_past_block.block_id() in user_data["finished-work-items"]:
+
+            self.get_labels_refresh(self.curr_past_block.block_id())
+        else:
+            self.lab_info_user_past_work_attempt_box.delete(0, END)
+            if user_data["finished-work-items"]:
+                self.get_labels_refresh(user_data["finished-work-items"][0])
+
+
 
     def add_user_to_server(self):
         name = tkSimpleDialog.askstring(title="Add User",
@@ -1422,6 +1432,34 @@ class MainWindow:
         index = int(box.curselection()[0])
 
         work_item = box.get(index)
+
+        if not lab_info_url:
+            self.parse_config()
+
+        training = True if "train_" in work_item else False
+        reliability = True if "reliability" in work_item else False
+
+        payload = {"lab-key": self.lab_key,
+                   "item-id": work_item,
+                   "training": training,
+                   "reliability": reliability,
+                   "username": self.lab_info_curr_user}
+
+        resp = requests.post(get_labels_url, json=payload, allow_redirects=False)
+
+        block_data = None
+        if resp.ok:
+            block_data = json.loads(resp.content)
+            self.curr_past_block_group = [self.json_to_block(block) for block in block_data]
+            self.curr_past_block = self.curr_past_block_group[0]
+            self.fill_attempt_list_lab_info()
+            self.load_block_lab_info()
+        else:
+            showwarning("Bad Request", "Server: {}".format(resp.content))
+            return
+
+    def get_labels_refresh(self, block_id):
+        work_item = block_id
 
         if not lab_info_url:
             self.parse_config()
