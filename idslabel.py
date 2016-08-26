@@ -1083,10 +1083,11 @@ class MainWindow:
         save_reliability_blocks_button = Button(self.lab_info_page, text="Save Reliability Blocks", command=self.lab_info_save_reliability_blocks)
         save_reliability_blocks_button.grid(row=5, column=6)
 
-        # save_user_training_blocks_button = Button(self.lab_info_page, text="Save User Train Blocks",
-        #                                          command=self.lab_info_save_training_blocks)
-        # save_user_training_blocks_button.grid(row=4, column=5)
+        delete_users_blocks_button = Button(self.lab_info_page, text="Delete User's Blocks", command=self.lab_info_delete_users_blocks)
+        delete_users_blocks_button.grid(row=6, column=6)
 
+        delete_labs_blocks_button = Button(self.lab_info_page, text="Delete Lab's Blocks", command=self.lab_info_delete_labs_blocks)
+        delete_labs_blocks_button.grid(row=7, column=6)
 
         payload = {"lab-key": self.lab_key}
 
@@ -1713,7 +1714,7 @@ class MainWindow:
         else:
             self.update_curr_user_refresh()
 
-    def lab_info_delete_users_block(self):
+    def lab_info_delete_users_blocks(self):
         if not self.lab_key:
             showwarning("Load Config", "You need to load the config.json first")
             return
@@ -1721,15 +1722,32 @@ class MainWindow:
         instance_map = {}
 
         payload = {"lab-key": self.lab_key,
-                   "coder": self.curr_past_block.coder,
-                   "block-id": self.curr_past_block.block_id(),
-                   "delete-type": "user",
-                   "instance": self.curr_past_block.instance}
+                   "coder": self.lab_info_curr_user,
+                   "delete-type": "user"}
 
         resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
 
         if not resp.ok:
             print resp.content
+        else:
+            self.update_curr_user_refresh()
+
+    def lab_info_delete_labs_blocks(self):
+        if not self.lab_key:
+            showwarning("Load Config", "You need to load the config.json first")
+            return
+
+        instance_map = {}
+
+        payload = {"lab-key": self.lab_key,
+                   "delete-type": "lab"}
+
+        resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
+
+        if not resp.ok:
+            print resp.content
+        else:
+            self.update_curr_user_refresh()
 
     def lab_info_save_lab_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
