@@ -19,6 +19,9 @@ from Tkinter import *
 import tkFileDialog
 import tkSimpleDialog
 from tkMessageBox import showwarning, askyesno
+import ttk
+
+
 
 from distutils.version import LooseVersion
 
@@ -1065,29 +1068,29 @@ class MainWindow:
         self.lab_info_past_work_info = Text(self.lab_info_page, width=36, height=20)
         self.lab_info_past_work_info.grid(row=1, column=5, rowspan=9)
 
-        save_this_block_button = Button(self.lab_info_page, text="Save This Block", command=self.lab_info_save_this_block)
-        save_this_block_button.grid(row=0, column=6)
+        self.save_this_block_button = Button(self.lab_info_page, text="Save This Block", command=self.lab_info_save_this_block)
+        self.save_this_block_button.grid(row=0, column=6)
 
-        delete_this_block_button = Button(self.lab_info_page, text="Delete This Block", command=self.lab_info_delete_this_block)
-        delete_this_block_button.grid(row=1, column=6)
+        self.delete_this_block_button = Button(self.lab_info_page, text="Delete This Block", command=self.lab_info_delete_this_block)
+        self.delete_this_block_button.grid(row=1, column=6)
 
-        save_all_lab_blocks_button = Button(self.lab_info_page, text="Save Lab Blocks", command=self.lab_info_save_lab_blocks)
-        save_all_lab_blocks_button.grid(row=2, column=6, )
+        self.save_all_lab_blocks_button = Button(self.lab_info_page, text="Save Lab Blocks", command=self.lab_info_save_lab_blocks)
+        self.save_all_lab_blocks_button.grid(row=2, column=6, )
 
-        save_all_blocks_button = Button(self.lab_info_page, text="Save All Blocks", command=self.lab_info_save_all_blocks)
-        save_all_blocks_button.grid(row=3, column=6)
+        self.save_all_blocks_button = Button(self.lab_info_page, text="Save All Blocks", command=self.lab_info_save_all_blocks)
+        self.save_all_blocks_button.grid(row=3, column=6)
 
-        save_training_blocks_button = Button(self.lab_info_page, text="Save Training Blocks", command=self.lab_info_save_training_blocks)
-        save_training_blocks_button.grid(row=4, column=6)
+        self.save_training_blocks_button = Button(self.lab_info_page, text="Save Training Blocks", command=self.lab_info_save_training_blocks)
+        self.save_training_blocks_button.grid(row=4, column=6)
 
-        save_reliability_blocks_button = Button(self.lab_info_page, text="Save Reliability Blocks", command=self.lab_info_save_reliability_blocks)
-        save_reliability_blocks_button.grid(row=5, column=6)
+        self.save_reliability_blocks_button = Button(self.lab_info_page, text="Save Reliability Blocks", command=self.lab_info_save_reliability_blocks)
+        self.save_reliability_blocks_button.grid(row=5, column=6)
 
-        delete_users_blocks_button = Button(self.lab_info_page, text="Delete User's Blocks", command=self.lab_info_delete_users_blocks)
-        delete_users_blocks_button.grid(row=6, column=6)
+        self.delete_users_blocks_button = Button(self.lab_info_page, text="Delete User's Blocks", command=self.lab_info_delete_users_blocks)
+        self.delete_users_blocks_button.grid(row=6, column=6)
 
-        delete_labs_blocks_button = Button(self.lab_info_page, text="Delete Lab's Blocks", command=self.lab_info_delete_labs_blocks)
-        delete_labs_blocks_button.grid(row=7, column=6)
+        self.delete_labs_blocks_button = Button(self.lab_info_page, text="Delete Lab's Blocks", command=self.lab_info_delete_labs_blocks)
+        self.delete_labs_blocks_button.grid(row=7, column=6)
 
         payload = {"lab-key": self.lab_key}
 
@@ -1715,39 +1718,43 @@ class MainWindow:
             self.update_curr_user_refresh()
 
     def lab_info_delete_users_blocks(self):
-        if not self.lab_key:
-            showwarning("Load Config", "You need to load the config.json first")
-            return
+        theyre_sure = askyesno("Delete User's Blocks",
+                               "Are you sure you want to delete all of this user's submissions?")
 
-        instance_map = {}
+        if theyre_sure:
+            if not self.lab_key:
+                showwarning("Load Config", "You need to load the config.json first")
+                return
 
-        payload = {"lab-key": self.lab_key,
-                   "coder": self.lab_info_curr_user,
-                   "delete-type": "user"}
+            payload = {"lab-key": self.lab_key,
+                       "coder": self.lab_info_curr_user,
+                       "delete-type": "user"}
 
-        resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
+            resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
 
-        if not resp.ok:
-            print resp.content
-        else:
-            self.update_curr_user_refresh()
+            if not resp.ok:
+                print resp.content
+            else:
+                self.update_curr_user_refresh()
+
 
     def lab_info_delete_labs_blocks(self):
-        if not self.lab_key:
-            showwarning("Load Config", "You need to load the config.json first")
-            return
+        theyre_sure = askyesno("Delete Lab's Blocks",
+                               "Are you sure you want to delete all of this lab's submissions?")
+        if theyre_sure:
+            if not self.lab_key:
+                showwarning("Load Config", "You need to load the config.json first")
+                return
 
-        instance_map = {}
+            payload = {"lab-key": self.lab_key,
+                       "delete-type": "lab"}
 
-        payload = {"lab-key": self.lab_key,
-                   "delete-type": "lab"}
+            resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
 
-        resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
-
-        if not resp.ok:
-            print resp.content
-        else:
-            self.update_curr_user_refresh()
+            if not resp.ok:
+                print resp.content
+            else:
+                self.update_curr_user_refresh()
 
     def lab_info_save_lab_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
@@ -1786,9 +1793,10 @@ class MainWindow:
             block_data = json.loads(resp.content)
 
         blocks = []
-        for block_group in block_data:
-            for block in block_group["blocks"]:
-                blocks.append(self.json_to_block(block))
+        if block_data:
+            for block_group in block_data:
+                for block in block_group["blocks"]:
+                    blocks.append(self.json_to_block(block))
 
         self.save_blocks_to_csv(blocks, output_path)
 
