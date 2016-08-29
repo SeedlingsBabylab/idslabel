@@ -26,11 +26,12 @@ import ttk
 from distutils.version import LooseVersion
 
 
-version = "1.0.0"
+version = "0.1.0"
 
 
 get_block_url = ""
 delete_block_url = ""
+delete_user_url = ""
 lab_info_url = ""
 all_lab_info_url = ""
 add_user_url = ""
@@ -1092,6 +1093,9 @@ class MainWindow:
         self.delete_labs_blocks_button = Button(self.lab_info_page, text="Delete Lab's Blocks", command=self.lab_info_delete_labs_blocks)
         self.delete_labs_blocks_button.grid(row=7, column=6)
 
+        self.delete_this_user_button = Button(self.lab_info_page, text="Delete This User", command=self.lab_info_delete_this_user)
+        self.delete_this_user_button.grid(row=8, column=6)
+
         payload = {"lab-key": self.lab_key}
 
         resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
@@ -1132,6 +1136,30 @@ class MainWindow:
         for name, user in lab["users"].iteritems():
             self.all_lab_info_user_box.insert(i, user["name"])
             i += 1
+
+    def update_user_list(self):
+        payload = {"lab-key": self.lab_key}
+
+        resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
+
+        if resp.ok:
+            self.lab_data = json.loads(resp.content)
+
+            self.lab_info_user_box.delete(0, END)
+            i = 0
+            for key, value in self.lab_data['users'].iteritems():
+                self.lab_info_user_box.insert(i, value['name'])
+                self.lab_users.append(value["name"])
+                i += 1
+
+            self.lab_info_user_work_box.delete(0, END)
+            self.lab_info_user_past_work_box.delete(0, END)
+            self.lab_info_user_past_work_attempt_box.delete(0, END)
+            self.lab_info_past_work_box.delete(0, END)
+
+            self.lab_info_past_work_info.configure(state="normal")
+            self.lab_info_past_work_info.delete("1.0", END)
+            self.lab_info_past_work_info.configure(state="disabled")
 
     def update_curr_user(self, evt):
         box = evt.widget
@@ -1174,8 +1202,6 @@ class MainWindow:
             if user_data["finished-work-items"]:
                 self.get_labels_refresh(user_data["finished-work-items"][0])
 
-
-
     def add_user_to_server(self):
         name = tkSimpleDialog.askstring(title="Add User",
                                         prompt="Username:",
@@ -1196,6 +1222,7 @@ class MainWindow:
     def parse_config(self):
         global get_block_url
         global delete_block_url
+        global delete_user_url
         global lab_info_url
         global all_lab_info_url
         global add_user_url
@@ -1219,6 +1246,7 @@ class MainWindow:
 
             get_block_url = config["server-urls"]["get_block_url"]
             delete_block_url = config["server-urls"]["delete_block_url"]
+            delete_user_url = config["server-urls"]["delete_user_url"]
             lab_info_url = config["server-urls"]["lab_info_url"]
             all_lab_info_url = config["server-urls"]["all_lab_info_url"]
             add_user_url = config["server-urls"]["add_user_url"]
@@ -1737,7 +1765,6 @@ class MainWindow:
             else:
                 self.update_curr_user_refresh()
 
-
     def lab_info_delete_labs_blocks(self):
         theyre_sure = askyesno("Delete Lab's Blocks",
                                "Are you sure you want to delete all of this lab's submissions?")
@@ -1755,6 +1782,26 @@ class MainWindow:
                 print resp.content
             else:
                 self.update_curr_user_refresh()
+
+    def lab_info_delete_this_user(self):
+        theyre_sure = askyesno("Delete Lab's Blocks",
+                               "Are you sure you want to delete this user?\n\n"
+                               "All of their data (including submissions) will be lost.")
+        if theyre_sure:
+            if not self.lab_key:
+                showwarning("Load Config", "You need to load the config.json first")
+                return
+
+        payload = {"lab-key": self.lab_key,
+                   "username": self.lab_info_curr_user}
+
+        resp = requests.post(delete_user_url, json=payload, allow_redirects=False)
+
+        if not resp.ok:
+            print resp.content
+        else:
+            self.update_user_list()
+            #self.update_curr_user_refresh()
 
     def lab_info_save_lab_blocks(self):
         output_path = tkFileDialog.asksaveasfilename()
