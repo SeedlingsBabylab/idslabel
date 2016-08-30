@@ -11,3 +11,4 @@ blocks
 configs
 *.spec
 *.csv
+*.pyc

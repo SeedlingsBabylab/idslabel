@@ -26,126 +26,19 @@ import ttk
 from distutils.version import LooseVersion
 
 
-version = "0.1.0"
+import labinfo
+import getblock
+import idsserver
+import idsblocks
+import idssession
 
 
-get_block_url = ""
-delete_block_url = ""
-delete_user_url = ""
-lab_info_url = ""
-all_lab_info_url = ""
-add_user_url = ""
-submit_labels_url = ""
-get_labels_url = ""
-get_lab_labels_url = ""
-get_all_labels_url = ""
-get_train_labels_url = ""
-get_relia_labels_url = ""
-send_back_blocks_url = ""
+version = "1.0.0"
 
-
-class Block:
-    def __init__(self, index, clan_file):
-
-        self.index = index
-        self.instance = 0
-        self.clan_file = clan_file
-        self.num_clips = None
-        self.clips = []
-        self.sliced = False
-        self.dont_share = False
-        self.id = ""
-        self.coder = None
-        self.lab_key = None
-        self.lab_name = None
-        self.username = None
-        self.old = False
-        self.length = 0
-        self.training = False
-        self.reliability = False
-
-    def sort_clips(self):
-        self.clips.sort(key=lambda x: x.clip_index)
-
-    def to_dict(self):
-        block = {}
-
-        block["clips"] = []
-        for clip in self.clips:
-            block["clips"].append(clip.to_dict())
-
-        block["coder"] = self.coder
-        block["lab-key"] = self.lab_key
-        block["lab-name"] = self.lab_name
-        block["id"] = self.id
-        block["dont-share"] = self.dont_share
-        block["clan-file"] = self.clan_file
-        block["block-index"] = self.index
-        block["training"] = self.training
-        block["reliability"] = self.reliability
-        block["username"] = self.username
-
-        return block
-
-    def block_id(self):
-        return "{}:::{}".format(self.clan_file, self.index)
-
-class Clip:
-    def __init__(self, path, block_index, clip_index):
-        self.audio_path = path
-        self.parent_audio_path = None
-        self.clan_file = None
-        self.block_index = block_index
-        self.clip_index = clip_index
-        self.clip_tier = None
-        self.multiline = False
-        self.multi_tier_parent = None
-        self.start_time = None
-        self.offset_time = None
-        self.timestamp = None
-        self.classification = None
-        self.gender_label = None
-        self.label_date = None
-        self.coder = None
-        self.lab_key = None
-
-
-    def to_dict(self):
-        clip = {}
-
-        clip["clan-file"] = self.clan_file
-        clip["block-index"] = self.block_index
-        clip["clip-index"] = self.clip_index
-        clip["clip-tier"] = self.clip_tier
-        clip["multiline"] = self.multiline
-        clip["multi-tier-parent"] = self.multi_tier_parent
-        clip["start-time"] = self.start_time
-        clip["offset-time"] = self.offset_time
-        clip["timestamp"] = self.timestamp
-        clip["classification"] = self.classification
-        clip["gender-label"] = self.gender_label
-        clip["label-date"] = self.label_date
-        clip["coder"] = self.coder
-
-        return clip
-
-
-    def __repr__(self):
-        return "clip: {} - [block: {}] [tier: {}] [label: {}] [time: {}]"\
-                .format(self.clip_index,
-                        self.block_index,
-                        self.clip_tier,
-                        self.classification,
-                        self.timestamp)
 
 class MainWindow:
 
     def __init__(self, master):
-        self.clan_file = None
-        self.audio_file = None
-
-        self.conversation_blocks = None
-
         self.current_clip = None
 
         self.current_block_index = None
@@ -157,6 +50,7 @@ class MainWindow:
         self.root.title("IDS Label  v"+version)      # title of window
         self.root.geometry("1000x610")              # size of GUI window
         self.main_frame = Frame(root)               # main frame into which all the Gui components will be placed
+
 
         self.main_frame.bind("<Key>", self.key_select)
         self.main_frame.bind("<space>", self.shortcut_play_clip)
@@ -276,6 +170,7 @@ class MainWindow:
         self.codername_entry.bind("<Return>", self.codername_entered)
 
 
+
         self.num_blocks_to_get = 3
         self.block_request_num_entry = Entry(self.main_frame, width=7)
         self.block_request_num_entry.insert(END, str(self.num_blocks_to_get))
@@ -292,8 +187,7 @@ class MainWindow:
 
         self.interval_regx = re.compile("\\x15\d+_\d+\\x15")
 
-        self.clip_blocks = []
-        self.randomized_blocks = []
+        #self.clip_blocks = []
         self.clip_path = None
 
         self.slicing_process = None
@@ -369,8 +263,6 @@ class MainWindow:
         self.lab_users = []
 
 
-        self.all_lab_info_page = None
-        self.all_lab_info_lab_box = None
         self.all_lab_info_user_box = None
         self.all_lab_data = None
         self.curr_lab = None
@@ -388,6 +280,15 @@ class MainWindow:
 
         self.dont_share_applied = False
 
+        self.choose_block_page = None
+
+        self.temp_clip_dir = None
+
+        self.server = idsserver.IDSServer()
+        self.session = idssession.Session(self.server)
+        self.lab_info_page = None
+
+
     def key_select(self, event):
         self.main_frame.focus_set()
 
@@ -396,7 +297,7 @@ class MainWindow:
         if selected_key in self.key_label_map:
             if not self.current_clip:
                 self.set_curr_clip(0)
-            if self.codername_entry.get() == "CODER_NAME":
+            if self.session.codername == "CODER_NAME":
                 showwarning("Coder Name", "You need to set a coder name (upper right hand corner)")
                 return
 
@@ -454,27 +355,18 @@ class MainWindow:
         except Exception as e:
             print e.message
 
-        if not self.clip_directory:
+        if not self.session.clip_directory or not self.temp_clip_dir:
             showwarning("Clips Directory", "Choose directory to store downloaded blocks")
-            self.clip_directory = tkFileDialog.askdirectory()
-        del self.clip_blocks[:]
+            self.temp_clip_dir = tkFileDialog.askdirectory()
+        del self.session.clip_blocks[:]
+        self.parse_config()
+        self.session.codername = self.codername_entry.get()
+        self.session.clip_directory = self.temp_clip_dir
         self.prev_downl_blocks = self.load_previously_downl_blocks()
         if self.prev_downl_blocks:
-            self.clip_blocks.extend(self.prev_downl_blocks)
+            self.session.clip_blocks.extend(self.prev_downl_blocks)
         self.load_downloaded_blocks()
         self.main_frame.focus_set()
-
-    def find_clip_and_update(self, entry):
-        block_index = int(entry[4])-1
-        block = self.clip_blocks[block_index]
-        clip_index = int(entry[6]) - 1
-        block.clips[clip_index].label_date = entry[0]
-        block.clips[clip_index].coder = entry[1]
-        block.clips[clip_index].classification = entry[8]
-
-        if entry[9] != "N":
-            block.clips[clip_index].multiline = True
-            block.clips[clip_index].multi_tier_parent = entry[9]
 
     def play_clip(self):
         current_clip = self.block_list.curselection()
@@ -534,146 +426,6 @@ class MainWindow:
 
         p.terminate()
 
-    def create_block_from_zip(self, path_to_zip):
-        # extract the zipped block
-        zip = zipfile.ZipFile(path_to_zip)
-        clips_path = os.path.dirname(path_to_zip)
-        zip.extractall(clips_path)
-
-        # read the block's metadata from the csv file
-        csv_files = [x for x in os.listdir(clips_path) if ".csv" in x]
-        csv_file = ""
-        if len(csv_files) == 1:
-            csv_file = csv_files[0]
-
-        csv_data = []
-
-        csv_path = os.path.join(clips_path, csv_file)
-        with open(csv_path, "rU") as csv_input:
-            reader = csv.reader(csv_input)
-            reader.next()
-            for row in reader:
-                csv_data.append(row)
-
-        block_index = int(os.path.basename(path_to_zip).replace(".zip", ""))
-
-        block = Block(block_index, csv_data[0][2].replace(".cha", ""))
-        if csv_data[0][11] == "True":
-            block.training = True
-        if csv_data[0][12] == "True":
-            block.reliability = True
-
-        block.coder = self.codername_entry.get()
-        block.lab_key = self.lab_key
-
-        for file in os.listdir(clips_path):
-            if file.endswith(".wav"):
-                clip_index = int(file.replace(".wav", ""))
-                clip = Clip(os.path.join(clips_path, file), block_index, clip_index)
-                clip = self.fill_in_clip_info_from_csv(csv_data, clip)
-                clip.audio_path = os.path.join(clips_path, file)
-                block.clips.append(clip)
-
-        block.sort_clips()
-
-        block.id = block.clan_file + ":::" + str(block.index)
-
-        block_length = 0
-        for clip in block.clips:
-            time_split = clip.timestamp.split("_")
-            time_split = [int(x) for x in time_split]
-            block_length += time_split[1] - time_split[0]
-
-        time = self.ms_to_hhmmss([0, block_length])
-
-        block.length = time[2]
-
-        return block
-
-    def create_block_from_clips(self, path_to_zip):
-        clips_path = os.path.dirname(path_to_zip)
-
-        # read the block's metadata from the csv file
-        csv_files = [x for x in os.listdir(clips_path) if ".csv" in x]
-        csv_file = ""
-        if len(csv_files) == 1:
-            csv_file = csv_files[0]
-
-        csv_data = []
-
-        csv_path = os.path.join(clips_path, csv_file)
-        with open(csv_path, "rU") as csv_input:
-            reader = csv.reader(csv_input)
-            reader.next()
-            for row in reader:
-                csv_data.append(row)
-
-        block_index = int(os.path.basename(path_to_zip).replace(".zip", ""))
-
-        block = Block(block_index, csv_data[0][2].replace(".cha", ""))
-
-        if csv_data[0][11] == "True":
-            block.training = True
-        if csv_data[0][12] == "True":
-            block.reliability = True
-
-        block.coder = self.codername_entry.get()
-        block.lab_key = self.lab_key
-
-        for file in os.listdir(clips_path):
-            if file.endswith(".wav"):
-                clip_index = int(file.replace(".wav", ""))
-                clip = Clip(os.path.join(clips_path, file), block_index, clip_index)
-                clip = self.fill_in_clip_info_from_csv(csv_data, clip)
-                clip.audio_path = os.path.join(clips_path, file)
-                block.clips.append(clip)
-
-        block.sort_clips()
-
-        block.id = block.clan_file + ":::" + str(block.index)
-
-        block_length = 0
-        for clip in block.clips:
-            time_split = clip.timestamp.split("_")
-            time_split = [int(x) for x in time_split]
-            block_length += time_split[1] - time_split[0]
-
-        time = self.ms_to_hhmmss([0, block_length])
-
-        block.length = time[2]
-
-        return block
-
-    def fill_in_clip_info_from_csv(self, csv_array, clip):
-        clip_row = [row for row in csv_array if int(row[6]) == clip.clip_index]
-
-        if len(clip_row) == 1:
-            clip_row=clip_row[0]
-        else:
-            print "something wrong with the input csv. duplicate clips: clip# {}"\
-                .format(clip.clip_index)
-
-        clip.clan_file = clip_row[2]
-        clip.audio_file = clip_row[3]
-        clip.block_index = clip_row[4]
-        clip.timestamp = clip_row[5]
-        clip.clip_tier = clip_row[7]
-        clip.multi_tier_parent = clip_row[9]
-
-        if clip.multi_tier_parent != "N":
-            clip.multiline = True
-        else:
-            clip.multiline = False
-
-        time = clip.timestamp.split("_")
-        time = [int(time[0]), int(time[1])]
-        final_time = self.ms_to_hhmmss(time)
-
-        clip.start_time = str(final_time[0])
-        clip.offset_time = str(final_time[2])
-
-        return clip
-
     def load_previous_block_downloaded(self, event):
         selected_block = self.previous_block_menu.curselection()
         index = int(selected_block[0])
@@ -681,7 +433,7 @@ class MainWindow:
 
     def load_downloaded_block(self, block_index):
         self.dont_share_applied = False
-        self.current_block = self.clip_blocks[block_index]
+        self.current_block = self.session.clip_blocks[block_index]
         self.current_block_index = block_index
 
         self.block_list.delete(0, END)
@@ -831,30 +583,10 @@ class MainWindow:
         self.current_clip = self.current_block.clips[index]
         self.update_curr_clip_info()
 
-    def ms_to_hhmmss(self, interval):
-        x_start = datetime.timedelta(milliseconds= interval[0])
-        x_end = datetime.timedelta(milliseconds=interval[1])
-
-        x_diff = datetime.timedelta(milliseconds=interval[1]-interval[0])
-
-        start = ""
-        if interval[0] == 0:
-            start = "0"+x_start.__str__()[:11]+".000"
-        else:
-
-            start = "0"+x_start.__str__()[:11]
-            if start[3] == ":":
-                start = start[1:]
-        end = "0"+x_end.__str__()[:11]
-        if end[3] == ":":
-            end = end[1:]
-
-        return [start, end, x_diff]
-
     def set_clip_path(self):
-        self.clip_directory = tkFileDialog.askdirectory()
-        self.prev_downl_blocks = self.load_previously_downl_blocks()
-        self.clip_blocks.extend(self.prev_downl_blocks)
+        self.session.clip_directory = tkFileDialog.askdirectory()
+        self.session.prev_downl_blocks = self.load_previously_downl_blocks()
+        self.session.clip_blocks.extend(self.prev_downl_blocks)
 
     def save_as_classifications(self, event):
         self.set_classification_output()
@@ -968,7 +700,7 @@ class MainWindow:
         textbox.configure(state="disabled")
 
     def check_github_for_latest_version(self):
-        resp = urllib2.urlopen("https://api.github.com/repos/SeedlingsBabylab/idslabel/tags")
+        resp = urllib2.urlopen(self.server.github_tags_url)
 
         json_response =  json.loads(resp.read())
 
@@ -980,290 +712,47 @@ class MainWindow:
                                        "\n\nhttps://github.com/SeedlingsBabylab/idslabel/releases")
 
     def get_blocks(self):
-        if not self.clip_directory:
+        if not self.session.clip_directory:
             showwarning("Set Audio Clips Directory", "You need to have a directory set before downloading blocks\n\n"+
                         "(File -> Set Block Path)")
             return
-        if self.codername_entry.get() == "CODER_NAME":
+        if self.session.codername == "CODER_NAME":
             showwarning("Set Coder Name", "You need to set CODER_NAME before requesting blocks")
             return
 
         error_response = ""
         for i in range(self.num_blocks_to_get):
-            error_response = self.get_block()
+            error_response = self.server.get_block()
 
         if error_response:
             showwarning("Bad Request", "Server: " + error_response)
 
         self.load_downloaded_blocks()
 
-    def get_block(self):
-        payload = {}
-        payload["lab-key"] = self.lab_key
-        payload["username"] = self.codername_entry.get()
-
-        if not get_block_url:
-            self.parse_config()
-
-        resp = requests.post(get_block_url, json=payload, stream=True, allow_redirects=False)
-
-        if resp.status_code != 200:
-            return resp.content
-
-        if resp.ok:
-            params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
-            filename = params[1]['filename']
-            file_end = os.path.basename(filename)
-            file_root = "{}_{}_block{}".format(self.codername_entry.get(), os.path.dirname(filename), file_end)
-            block_path = os.path.join(self.clip_directory, file_root)
-
-            if not os.path.exists(block_path):
-                os.makedirs(block_path)
-
-            output_path = os.path.join(block_path, file_end)
-
-            with open(output_path, "wb") as output:
-                output.write(resp.content)
-
-            block = self.create_block_from_zip(output_path)
-
-            self.clip_blocks.append(block)
-
     def get_lab_info(self):
-        self.lab_info_page = Toplevel()
-        self.lab_info_page.title("Lab Info")
-        self.lab_info_page.geometry("1157x400")
-
-        users_label = Label(self.lab_info_page, text="Users")
-        users_label.grid(row=0, column=0)
-
-        act_work_item_label = Label(self.lab_info_page, text="Active Blocks")
-        act_work_item_label.grid(row=0, column=1)
-
-        fin_work_item_label = Label(self.lab_info_page, text="Finished Blocks")
-        fin_work_item_label.grid(row=0, column=2)
-
-        block_attempt_label = Label(self.lab_info_page, text="Attempt #")
-        block_attempt_label.grid(row=0, column=3)
-
-
-        self.lab_info_user_box = Listbox(self.lab_info_page, width=15, height=20)
-        self.lab_info_user_box.grid(row=1, column=0, rowspan=9)
-        self.lab_info_user_box.bind('<<ListboxSelect>>', self.update_curr_user)
-
-        self.lab_info_user_work_box = Listbox(self.lab_info_page, width=22, height=20)
-        self.lab_info_user_work_box.grid(row=1, column=1, rowspan=9)
-
-        self.lab_info_user_past_work_box = Listbox(self.lab_info_page, width=22, height=20)
-        self.lab_info_user_past_work_box.grid(row=1, column=2, rowspan=9)
-        self.lab_info_user_past_work_box.bind('<<ListboxSelect>>', self.get_labels)
-
-        self.lab_info_user_past_work_attempt_box = Listbox(self.lab_info_page, width=5, height=20)
-        self.lab_info_user_past_work_attempt_box.grid(row=1, column=3, rowspan=9)
-        self.lab_info_user_past_work_attempt_box.bind('<<ListboxSelect>>', self.load_block_attempt)
-
-        self.lab_info_past_work_box = Listbox(self.lab_info_page, width=10, height=20)
-        self.lab_info_past_work_box.grid(row=1, column=4, rowspan=9)
-        self.lab_info_past_work_box.bind('<<ListboxSelect>>', self.update_lab_info_curr_clip)
-
-        self.lab_info_past_work_info = Text(self.lab_info_page, width=36, height=20)
-        self.lab_info_past_work_info.grid(row=1, column=5, rowspan=9)
-
-        self.save_this_block_button = Button(self.lab_info_page, text="Save This Block", command=self.lab_info_save_this_block)
-        self.save_this_block_button.grid(row=0, column=6)
-
-        self.delete_this_block_button = Button(self.lab_info_page, text="Delete This Block", command=self.lab_info_delete_this_block)
-        self.delete_this_block_button.grid(row=1, column=6)
-
-        self.save_all_lab_blocks_button = Button(self.lab_info_page, text="Save Lab Blocks", command=self.lab_info_save_lab_blocks)
-        self.save_all_lab_blocks_button.grid(row=2, column=6, )
-
-        self.save_all_blocks_button = Button(self.lab_info_page, text="Save All Blocks", command=self.lab_info_save_all_blocks)
-        self.save_all_blocks_button.grid(row=3, column=6)
-
-        self.save_training_blocks_button = Button(self.lab_info_page, text="Save Training Blocks", command=self.lab_info_save_training_blocks)
-        self.save_training_blocks_button.grid(row=4, column=6)
-
-        self.save_reliability_blocks_button = Button(self.lab_info_page, text="Save Reliability Blocks", command=self.lab_info_save_reliability_blocks)
-        self.save_reliability_blocks_button.grid(row=5, column=6)
-
-        self.delete_users_blocks_button = Button(self.lab_info_page, text="Delete User's Blocks", command=self.lab_info_delete_users_blocks)
-        self.delete_users_blocks_button.grid(row=6, column=6)
-
-        self.delete_labs_blocks_button = Button(self.lab_info_page, text="Delete Lab's Blocks", command=self.lab_info_delete_labs_blocks)
-        self.delete_labs_blocks_button.grid(row=7, column=6)
-
-        self.delete_this_user_button = Button(self.lab_info_page, text="Delete This User", command=self.lab_info_delete_this_user)
-        self.delete_this_user_button.grid(row=8, column=6)
-
-        payload = {"lab-key": self.lab_key}
-
-        resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
-
-        if resp.ok:
-            self.lab_data = json.loads(resp.content)
-
-            i = 0
-            for key, value in self.lab_data['users'].iteritems():
-                self.lab_info_user_box.insert(i, value['name'])
-                self.lab_users.append(value["name"])
-                i+=1
-
-    def lab_info_ping(self):
-        if not lab_info_url:
-            self.parse_config()
-
-        payload = {"lab-key": self.lab_key}
-
-        resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
-
-        if resp.ok:
-            self.lab_data = json.loads(resp.content)
-            return self.lab_data
-        else:
-            showwarning("Bad Request", "User: \"{}\" does not exist on the server.\n\n".format(self.codername_entry.get())+\
-                                       "(File -> Add User to Server)")
-            print resp.content
-            return
-
-    def update_curr_lab(self, evt):
-        box = evt.widget
-        index = int(box.curselection()[0])
-
-        lab = self.all_lab_data[index]
-
-        i = 0
-        for name, user in lab["users"].iteritems():
-            self.all_lab_info_user_box.insert(i, user["name"])
-            i += 1
-
-    def update_user_list(self):
-        payload = {"lab-key": self.lab_key}
-
-        resp = requests.post(lab_info_url, json=payload, allow_redirects=False)
-
-        if resp.ok:
-            self.lab_data = json.loads(resp.content)
-
-            self.lab_info_user_box.delete(0, END)
-            i = 0
-            for key, value in self.lab_data['users'].iteritems():
-                self.lab_info_user_box.insert(i, value['name'])
-                self.lab_users.append(value["name"])
-                i += 1
-
-            self.lab_info_user_work_box.delete(0, END)
-            self.lab_info_user_past_work_box.delete(0, END)
-            self.lab_info_user_past_work_attempt_box.delete(0, END)
-            self.lab_info_past_work_box.delete(0, END)
-
-            self.lab_info_past_work_info.configure(state="normal")
-            self.lab_info_past_work_info.delete("1.0", END)
-            self.lab_info_past_work_info.configure(state="disabled")
-
-    def update_curr_user(self, evt):
-        box = evt.widget
-        index = int(box.curselection()[0])
-
-        self.lab_info_curr_user = box.get(index)
-        user_data = self.lab_data["users"][str(self.lab_info_curr_user)]
-
-        self.lab_info_user_work_box.delete(0, END)
-        if user_data["active-work-items"]:
-            for index, item_id in enumerate(user_data["active-work-items"]):
-                self.lab_info_user_work_box.insert(index, item_id)
-
-        self.lab_info_user_past_work_box.delete(0, END)
-        if user_data["finished-work-items"]:
-            for index, item_id in enumerate(user_data["finished-work-items"]):
-                self.lab_info_user_past_work_box.insert(index, item_id)
-
-    def update_curr_user_refresh(self):
-        self.lab_info_ping()
-
-        user_data = self.lab_data["users"][str(self.lab_info_curr_user)]
-
-        self.lab_info_user_work_box.delete(0, END)
-        if user_data["active-work-items"]:
-            for index, item_id in enumerate(user_data["active-work-items"]):
-                self.lab_info_user_work_box.insert(index, item_id)
-
-        self.lab_info_user_past_work_box.delete(0, END)
-        if user_data["finished-work-items"]:
-            for index, item_id in enumerate(user_data["finished-work-items"]):
-                self.lab_info_user_past_work_box.insert(index, item_id)
-
-        if user_data["finished-work-items"] and \
-           self.curr_past_block.block_id() in user_data["finished-work-items"]:
-
-            self.get_labels_refresh(self.curr_past_block.block_id())
-        else:
-            self.lab_info_user_past_work_attempt_box.delete(0, END)
-            if user_data["finished-work-items"]:
-                self.get_labels_refresh(user_data["finished-work-items"][0])
+        self.lab_info_page = labinfo.LabInfoPage(self.server, self.session)
 
     def add_user_to_server(self):
-        name = tkSimpleDialog.askstring(title="Add User",
-                                        prompt="Username:",
-                                        initialvalue=self.codername_entry.get())
 
-        if not name:
-            return
-
-        payload = {"lab-key": self.lab_key,
-                   "lab-name": self.lab_name,
-                   "username": name}
-
-        resp = requests.post(add_user_url, json=payload, allow_redirects=False)
-
-        if not resp.ok:
-            print resp.content
+        self.server.add_user_to_server()
 
     def parse_config(self):
-        global get_block_url
-        global delete_block_url
-        global delete_user_url
-        global lab_info_url
-        global all_lab_info_url
-        global add_user_url
-        global submit_labels_url
-        global get_labels_url
-        global get_labels_url
-        global get_lab_labels_url
-        global get_all_labels_url
-        global get_train_labels_url
-        global get_relia_labels_url
-        global send_back_blocks_url
 
         showwarning("Config File", "Please choose a config.json file to load")
         config_path = tkFileDialog.askopenfilename()
 
-        with open(config_path, "rU") as input:
-            config = json.load(input)
-
-            self.lab_key = config["lab-key"]
-            self.lab_name = config["lab-name"]
-
-            get_block_url = config["server-urls"]["get_block_url"]
-            delete_block_url = config["server-urls"]["delete_block_url"]
-            delete_user_url = config["server-urls"]["delete_user_url"]
-            lab_info_url = config["server-urls"]["lab_info_url"]
-            all_lab_info_url = config["server-urls"]["all_lab_info_url"]
-            add_user_url = config["server-urls"]["add_user_url"]
-            submit_labels_url = config["server-urls"]["submit_labels_url"]
-            get_labels_url = config["server-urls"]["get_labels_url"]
-            get_lab_labels_url = config["server-urls"]["get_lab_labels_url"]
-            get_all_labels_url = config["server-urls"]["get_all_labels_url"]
-            get_train_labels_url = config["server-urls"]["get_train_labels_url"]
-            get_relia_labels_url = config["server-urls"]["get_relia_labels_url"]
-            send_back_blocks_url = config["server-urls"]["send_back_blocks_url"]
+        self.server = idsserver.IDSServer(config_path, self.session)
+        self.session.server = self.server
+        self.server.session = self.session
+        self.session.lab_name = self.server.lab_name
+        self.session.lab_key = self.server.lab_key
 
     def submit_block(self):
         # check that the current block is completed before submitting
         block = self.current_block
 
-        block.username = self.codername_entry.get()
-        block.lab_name = self.lab_name
+        block.username = self.session.codername
+        block.lab_name = self.session.lab_name
 
         unfinished_clips = []
         for clip in block.clips:
@@ -1278,7 +767,7 @@ class MainWindow:
 
         if not unfinished_clips:
             submission = block.to_dict()
-            resp = requests.post(submit_labels_url, json=submission, allow_redirects=False)
+            resp = requests.post(self.server.submit_labels_url, json=submission, allow_redirects=False)
 
             if resp.status_code != 200:
                 showwarning("Bad Request", "Server: " + resp.content)
@@ -1287,15 +776,15 @@ class MainWindow:
             if resp.ok:
                 print "block: {}:::{}  sent back to the server".format(block.clan_file, block.index)
                 self.cleanup_block_data(block)
-                block_index = self.clip_blocks.index(block)
-                del self.clip_blocks[block_index]
+                block_index = self.session.clip_blocks.index(block)
+                del self.session.clip_blocks[block_index]
         else:
             showwarning("Incomplete Block", "You haven't classified all the FAN/MAN tiered clips within this block")
             return
 
         self.block_list.delete(0, END)
         self.load_downloaded_blocks()
-        if self.clip_blocks:
+        if self.session.clip_blocks:
             self.load_downloaded_block(0)
 
     def submit_block_and_save(self):
@@ -1340,49 +829,10 @@ class MainWindow:
             showwarning("Incomplete Block", "You haven't classified all the FAN/MAN tiered clips within this block")
             return
 
-    def submit_all_blocks(self):
-        blocks = self.get_completed_blocks()
-
-        if len(blocks[1]) > 0:
-            incomplete_blocks = ""
-            for block in blocks[1]:
-                incomplete_blocks += str(block.index) + " "
-            showwarning("Incomplete Blocks", "You haven't finished some of the blocks\n\n"+
-                        "blocks #: "+ incomplete_blocks + "\n\n" + "Only sending completed blocks")
-
-        for block in blocks[0]:
-            block.username = self.codername_entry.get()
-            submission = block.to_dict()
-            resp = requests.post(submit_labels_url, json=submission, allow_redirects=False)
-            if resp.status_code != 200:
-                showwarning("Bad Request", "Server: " + resp.content)
-                return
-            if resp.ok:
-                print "everything is ok"
-                self.cleanup_block_data(block)
-                block_index = self.clip_blocks.index(block)
-                del self.clip_blocks[block_index]
-
-        self.block_list.delete(0, END)
-        self.load_downloaded_blocks()
-        self.load_downloaded_block(0)
-
-    def labels_to_json(self):
-        blocks = {}
-        blocks["blocks"] = {}
-
-        for block in self.clip_blocks:
-            blocks["blocks"][block.id] = []
-
-        for block in self.clip_blocks:
-            for clip in block.clips:
-                blocks["blocks"][block.id].append(clip.to_dict())
-        return blocks
-
     def get_completed_blocks(self):
         completed_blocks = []
         incomplete_blocks = []
-        for block in self.clip_blocks:
+        for block in self.session.clip_blocks:
             unfinished_clips = []
             for clip in block.clips:
                 if clip.clip_tier == "FAN" or clip.clip_tier == "MAN":
@@ -1399,7 +849,7 @@ class MainWindow:
     def load_downloaded_blocks(self):
         self.block_list.delete(0, END)
         self.previous_block_menu.delete(0, END)
-        for index, block in enumerate(self.clip_blocks):
+        for index, block in enumerate(self.session.clip_blocks):
             block_string = "{} : {}".format(index+1, block.index)
             if block.old:
                 block_string += "  [old]"
@@ -1409,13 +859,13 @@ class MainWindow:
 
     def load_previously_downl_blocks(self):
         blocks = []
-        self.lab_info_ping()
+        self.server.lab_info_ping()
         user = self.codername_entry.get()
 
-        if not self.lab_data:
+        if not self.session.lab_data:
             return
 
-        users = self.lab_data["users"]
+        users = self.session.lab_data["users"]
 
         if user not in users:
             showwarning("Set Coder Name", "CODER_NAME: \"{}\" , is not known by the server.\n\n".format(user) +\
@@ -1425,12 +875,12 @@ class MainWindow:
         user_data = users[user]
         user_active_blocks = user_data["active-work-items"]
 
-        for root, dirs, files in os.walk(self.clip_directory):
+        for root, dirs, files in os.walk(self.session.clip_directory):
             if any(".zip" in file for file in files):
                 zips = [x for x in files if ".zip" in x]
                 if len(zips) > 0:
                     zipfile = os.path.join(root, zips[0])
-                    block = self.create_block_from_clips(zipfile)
+                    block = idsblocks.create_block_from_clips(zipfile, self.session.codername, self.session.lab_key)
                     block.old = True
                     root_basename = os.path.basename(root)
                     if user not in root_basename:
@@ -1450,7 +900,7 @@ class MainWindow:
 
     def enter_block_request_num(self, event):
         self.main_frame.focus_set()
-        self.num_blocks_to_get = int(self.block_request_num_entry.get())
+        self.session.num_blocks_to_get = int(self.block_request_num_entry.get())
 
     def cleanup_block_data(self, block):
         clips_path = ""
@@ -1458,468 +908,6 @@ class MainWindow:
             os.remove(clip.audio_path)
             clips_path = os.path.dirname(clip.audio_path)
         shutil.rmtree(clips_path)
-
-    def get_labels(self, evt):
-        box = evt.widget
-        index = int(box.curselection()[0])
-
-        work_item = box.get(index)
-
-        if not lab_info_url:
-            self.parse_config()
-
-        training = True if "train_" in work_item else False
-        reliability = True if "reliability" in work_item else False
-
-        payload = {"lab-key": self.lab_key,
-                   "item-id": work_item,
-                   "training": training,
-                   "reliability": reliability,
-                   "username": self.lab_info_curr_user}
-
-        resp = requests.post(get_labels_url, json=payload, allow_redirects=False)
-
-        block_data = None
-        if resp.ok:
-            block_data = json.loads(resp.content)
-            self.curr_past_block_group = [self.json_to_block(block) for block in block_data]
-            self.curr_past_block = self.curr_past_block_group[0]
-            self.fill_attempt_list_lab_info()
-            self.load_block_lab_info()
-        else:
-            showwarning("Bad Request", "Server: {}".format(resp.content))
-            return
-
-    def get_labels_refresh(self, block_id):
-        work_item = block_id
-
-        if not lab_info_url:
-            self.parse_config()
-
-        training = True if "train_" in work_item else False
-        reliability = True if "reliability" in work_item else False
-
-        payload = {"lab-key": self.lab_key,
-                   "item-id": work_item,
-                   "training": training,
-                   "reliability": reliability,
-                   "username": self.lab_info_curr_user}
-
-        resp = requests.post(get_labels_url, json=payload, allow_redirects=False)
-
-        block_data = None
-        if resp.ok:
-            block_data = json.loads(resp.content)
-            self.curr_past_block_group = [self.json_to_block(block) for block in block_data]
-            self.curr_past_block = self.curr_past_block_group[0]
-            self.fill_attempt_list_lab_info()
-            self.load_block_lab_info()
-        else:
-            showwarning("Bad Request", "Server: {}".format(resp.content))
-            return
-
-    def fill_attempt_list_lab_info(self):
-        self.lab_info_user_past_work_attempt_box.delete(0, END)
-
-        for index, block in enumerate(self.curr_past_block_group):
-            self.lab_info_user_past_work_attempt_box.insert(index, str(index+1))
-
-    def load_block_attempt(self, evt):
-        box = evt.widget
-        index = int(box.curselection()[0])
-
-        attempt_num = int(box.get(index)) - 1
-
-        if not lab_info_url:
-            self.parse_config()
-
-        self.curr_past_block = self.curr_past_block_group[attempt_num]
-
-        self.load_block_lab_info()
-
-    def load_block_lab_info(self):
-        self.lab_info_past_work_box.delete(0, END)
-
-        for index, element in enumerate(self.curr_past_block.clips):
-            self.lab_info_past_work_box.insert(index, element.clip_tier)
-            if element.clip_tier not in ["FAN", "MAN"]:
-                self.lab_info_past_work_box.itemconfig(index, fg="grey")
-
-        self.lab_info_past_work_box.selection_clear(0, END)
-        self.lab_info_past_work_box.selection_set(0)
-
-        self.update_lab_info_curr_clip_initial()
-
-    def update_lab_info_curr_clip(self, evt):
-        box = evt.widget
-        index = int(box.curselection()[0])
-
-        self.curr_lab_info_clip = self.curr_past_block.clips[index]
-        work_item = box.get(index)
-
-        self.lab_info_past_work_info.configure(state="normal")
-        self.lab_info_past_work_info.delete("1.0", END)
-
-        info_string = "{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n\n\n{}       {}\n{}   {}\n" \
-            .format("block:",
-                    str(self.curr_lab_info_clip.block_index),
-                    "clip:",
-                    str(self.curr_lab_info_clip.clip_index),
-                    "tier:",
-                    str(self.curr_lab_info_clip.clip_tier),
-                    "timestamp:",
-                    str(self.curr_lab_info_clip.timestamp),
-                    "clip length:",
-                    str(self.curr_lab_info_clip.offset_time),
-                    "clan file:",
-                    str(self.curr_lab_info_clip.clan_file),
-                    "coder:",
-                    str(self.curr_lab_info_clip.coder),
-                    "label:",
-                    str(self.curr_lab_info_clip.classification),
-                    "gender:",
-                    str(self.curr_lab_info_clip.gender_label))
-
-        self.lab_info_past_work_info.insert('1.0', info_string)
-
-        self.lab_info_past_work_info.tag_add("label", 10.6, 11.0)
-        self.lab_info_past_work_info.tag_add("gender", 11.7, 12.0)
-        self.lab_info_past_work_info.tag_configure("label", foreground="red")
-        self.lab_info_past_work_info.tag_configure("gender", foreground="#333ccc333")
-
-        self.lab_info_past_work_info.tag_add("block_key", 1.0, 1.5)
-        self.lab_info_past_work_info.tag_add("clip_key", 2.0, 2.4)
-        self.lab_info_past_work_info.tag_add("tier_key", 3.0, 3.4)
-        self.lab_info_past_work_info.tag_add("timestamp_key", 4.0, 4.9)
-        self.lab_info_past_work_info.tag_add("clip_length_key", 5.0, 5.11)
-        self.lab_info_past_work_info.tag_add("clan_file_key", 6.0, 6.9)
-        self.lab_info_past_work_info.tag_add("coder_key", 7.0, 7.6)
-        self.lab_info_past_work_info.tag_add("label_key", 10.0, 10.5)
-        self.lab_info_past_work_info.tag_add("gender_key", 11.0, 11.6)
-
-        self.lab_info_past_work_info.tag_add("block_value", 1.5, 2.0)
-        self.lab_info_past_work_info.tag_add("clip_value", 2.4, 3.0)
-        self.lab_info_past_work_info.tag_add("tier_value", 3.4, 4.0)
-        self.lab_info_past_work_info.tag_add("timestamp_value", 4.9, 5.0)
-        self.lab_info_past_work_info.tag_add("clip_length_value", 5.11, 6.0)
-        self.lab_info_past_work_info.tag_add("coder_value", 7.5, 8.0)
-        self.lab_info_past_work_info.tag_add("clan_file_value", 6.9, 7.0)
-        self.lab_info_past_work_info.tag_add("label_value", 10.5, 11.0)
-        self.lab_info_past_work_info.tag_add("gender_value", 11.6, 12.0)
-
-        self.lab_info_past_work_info.tag_configure("block_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("clip_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("tier_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("timestamp_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("clip_length_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("coder_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("clan_file_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("label_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("gender_key", font=("System", "12", "bold"))
-
-        self.lab_info_past_work_info.tag_configure("block_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("clip_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("tier_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("timestamp_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("clip_length_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("coder_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("clan_file_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("label_value", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("gender_value", font=("System", "12", "bold"))
-
-        self.lab_info_past_work_info.configure(state="disabled")
-
-    def update_lab_info_curr_clip_initial(self):
-        self.lab_info_past_work_box.selection_set(0)
-        self.curr_lab_info_clip = self.curr_past_block.clips[0]
-
-        self.lab_info_past_work_info.configure(state="normal")
-        self.lab_info_past_work_info.delete("1.0", END)
-
-        info_string = "{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n{}   {}\n\n\n{}       {}\n{}   {}\n" \
-            .format("block:",
-                    str(self.curr_lab_info_clip.block_index),
-                    "clip:",
-                    str(self.curr_lab_info_clip.clip_index),
-                    "tier:",
-                    str(self.curr_lab_info_clip.clip_tier),
-                    "timestamp:",
-                    str(self.curr_lab_info_clip.timestamp),
-                    "clip length:",
-                    str(self.curr_lab_info_clip.offset_time),
-                    "clan file:",
-                    str(self.curr_lab_info_clip.clan_file),
-                    "coder:",
-                    str(self.curr_lab_info_clip.coder),
-                    "label:",
-                    str(self.curr_lab_info_clip.classification),
-                    "gender:",
-                    str(self.curr_lab_info_clip.gender_label))
-
-        self.lab_info_past_work_info.insert('1.0', info_string)
-
-        self.lab_info_past_work_info.tag_add("label", 10.6, 11.0)
-        self.lab_info_past_work_info.tag_add("gender", 11.7, 12.0)
-        self.lab_info_past_work_info.tag_configure("label", foreground="red")
-        self.lab_info_past_work_info.tag_configure("gender", foreground="#333ccc333")
-
-        self.lab_info_past_work_info.tag_add("block_key", 1.0, 1.5)
-        self.lab_info_past_work_info.tag_add("clip_key", 2.0, 2.4)
-        self.lab_info_past_work_info.tag_add("tier_key", 3.0, 3.4)
-        self.lab_info_past_work_info.tag_add("timestamp_key", 4.0, 4.9)
-        self.lab_info_past_work_info.tag_add("clip_length_key", 5.0, 5.11)
-        self.lab_info_past_work_info.tag_add("clan_file_key", 6.0, 6.9)
-        self.lab_info_past_work_info.tag_add("coder_key", 7.0, 7.6)
-        self.lab_info_past_work_info.tag_add("label_key", 10.0, 10.5)
-        self.lab_info_past_work_info.tag_add("gender_key", 11.0, 11.6)
-
-        self.lab_info_past_work_info.tag_add("block_value", 1.5, 2.0)
-        self.lab_info_past_work_info.tag_add("clip_value", 2.4, 3.0)
-        self.lab_info_past_work_info.tag_add("tier_value", 3.4, 4.0)
-        self.lab_info_past_work_info.tag_add("timestamp_value", 4.9, 5.0)
-        self.lab_info_past_work_info.tag_add("clip_length_value", 5.11, 6.0)
-        self.lab_info_past_work_info.tag_add("coder_value", 7.5, 8.0)
-        self.lab_info_past_work_info.tag_add("clan_file_value", 6.9, 7.0)
-        self.lab_info_past_work_info.tag_add("label_value", 10.5, 11.0)
-        self.lab_info_past_work_info.tag_add("gender_value", 11.6, 12.0)
-
-        self.lab_info_past_work_info.tag_configure("block_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("clip_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("tier_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("timestamp_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("clip_length_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("coder_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("clan_file_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("label_key", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("gender_key", font=("System", "12", "bold"))
-
-        self.lab_info_past_work_info.tag_configure("block_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("clip_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("tier_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("timestamp_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("clip_length_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("coder_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("clan_file_value", font=("System", "12"))
-        self.lab_info_past_work_info.tag_configure("label_value", font=("System", "12", "bold"))
-        self.lab_info_past_work_info.tag_configure("gender_value", font=("System", "12", "bold"))
-
-        self.lab_info_past_work_info.configure(state="disabled")
-
-    def lab_info_save_this_block(self):
-        output_path = tkFileDialog.asksaveasfilename()
-        with open(output_path, "wb") as out:
-            writer = csv.writer(out)
-
-            writer.writerow(["date", "coder", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender",
-                             "dont_share", "training", "reliability"])
-
-            block = self.curr_past_block
-            dont_share = False
-            if block.dont_share:
-                dont_share = True
-
-            for clip in block.clips:
-                writer.writerow([clip.label_date, clip.coder, clip.clan_file,
-                                 clip.parent_audio_path, clip.block_index,
-                                 clip.timestamp, clip.clip_index, clip.clip_tier,
-                                 clip.classification, clip.gender_label, dont_share,
-                                 block.training, block.reliability])
-
-    def lab_info_delete_this_block(self):
-
-        if not self.lab_key:
-            showwarning("Load Config", "You need to load the config.json first")
-            return
-
-        payload = {"lab-key": self.lab_key,
-                   "coder": self.curr_past_block.coder,
-                   "block-id": self.curr_past_block.block_id(),
-                   "delete-type": "single",
-                   "instance": self.curr_past_block.instance}
-
-        resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
-
-        if not resp.ok:
-            print resp.content
-        else:
-            self.update_curr_user_refresh()
-
-    def lab_info_delete_users_blocks(self):
-        theyre_sure = askyesno("Delete User's Blocks",
-                               "Are you sure you want to delete all of this user's submissions?")
-
-        if theyre_sure:
-            if not self.lab_key:
-                showwarning("Load Config", "You need to load the config.json first")
-                return
-
-            payload = {"lab-key": self.lab_key,
-                       "coder": self.lab_info_curr_user,
-                       "delete-type": "user"}
-
-            resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
-
-            if not resp.ok:
-                print resp.content
-            else:
-                self.update_curr_user_refresh()
-
-    def lab_info_delete_labs_blocks(self):
-        theyre_sure = askyesno("Delete Lab's Blocks",
-                               "Are you sure you want to delete all of this lab's submissions?")
-        if theyre_sure:
-            if not self.lab_key:
-                showwarning("Load Config", "You need to load the config.json first")
-                return
-
-            payload = {"lab-key": self.lab_key,
-                       "delete-type": "lab"}
-
-            resp = requests.post(delete_block_url, json=payload, allow_redirects=False)
-
-            if not resp.ok:
-                print resp.content
-            else:
-                self.update_curr_user_refresh()
-
-    def lab_info_delete_this_user(self):
-        theyre_sure = askyesno("Delete Lab's Blocks",
-                               "Are you sure you want to delete this user?\n\n"
-                               "All of their data (including submissions) will be lost.")
-        if theyre_sure:
-            if not self.lab_key:
-                showwarning("Load Config", "You need to load the config.json first")
-                return
-
-        payload = {"lab-key": self.lab_key,
-                   "username": self.lab_info_curr_user}
-
-        resp = requests.post(delete_user_url, json=payload, allow_redirects=False)
-
-        if not resp.ok:
-            print resp.content
-        else:
-            self.update_user_list()
-            #self.update_curr_user_refresh()
-
-    def lab_info_save_lab_blocks(self):
-        output_path = tkFileDialog.asksaveasfilename()
-
-        if not self.lab_key:
-            showwarning("Load Config", "You need to load the config.json first")
-            return
-
-        payload = {"lab-key": self.lab_key}
-
-        resp = requests.post(get_lab_labels_url, json=payload, allow_redirects=False)
-
-        block_data = None
-        if resp.ok:
-            block_data = json.loads(resp.content)
-
-        blocks = []
-        for block in block_data:
-            blocks.append(self.json_to_block(block))
-
-        self.save_blocks_to_csv(blocks, output_path)
-
-    def lab_info_save_all_blocks(self):
-        output_path = tkFileDialog.asksaveasfilename()
-
-        if not self.lab_key:
-            showwarning("Load Config", "You need to load the config.json first")
-            return
-
-        payload = {"lab-key": self.lab_key}
-
-        resp = requests.post(get_all_labels_url, json=payload, allow_redirects=False)
-
-        block_data = None
-        if resp.ok:
-            block_data = json.loads(resp.content)
-
-        blocks = []
-        if block_data:
-            for block_group in block_data:
-                for block in block_group["blocks"]:
-                    blocks.append(self.json_to_block(block))
-
-        self.save_blocks_to_csv(blocks, output_path)
-
-    def lab_info_save_training_blocks(self):
-        output_path = tkFileDialog.asksaveasfilename()
-
-        if not self.lab_key:
-            showwarning("Load Config", "You need to load the config.json first")
-            return
-
-        payload = {"lab-key": self.lab_key}
-
-        resp = requests.post(get_train_labels_url, json=payload, allow_redirects=False)
-
-        block_data = None
-        if resp.ok:
-            block_data = json.loads(resp.content)
-
-        blocks = []
-        for block in block_data:
-            blocks.append(self.json_to_block(block))
-
-        self.save_blocks_to_csv(blocks, output_path)
-
-    def lab_info_save_reliability_blocks(self):
-        output_path = tkFileDialog.asksaveasfilename()
-
-        if not self.lab_key:
-            showwarning("Load Config", "You need to load the config.json first")
-            return
-
-        payload = {"lab-key": self.lab_key}
-
-        resp = requests.post(get_relia_labels_url, json=payload, allow_redirects=False)
-
-        block_data = None
-        if resp.ok:
-            block_data = json.loads(resp.content)
-
-        blocks = []
-        for block in block_data:
-            blocks.append(self.json_to_block(block))
-
-        self.save_blocks_to_csv(blocks, output_path)
-
-    def json_to_block(self, block_json):
-
-        block = Block(block_json["block-index"], block_json["clan-file"])
-        block.instance = block_json["block-instance"]
-        block.dont_share = block_json["dont-share"]
-        block.lab_name = block_json["lab-name"]
-        block.coder = block_json["coder"]
-
-        block.training = block_json["training"]
-        block.reliability = block_json["reliability"]
-
-        for clip in block_json["clips"]:
-            block.clips.append(self.json_to_clip(clip, block.index, block.clan_file))
-
-        return block
-
-    def json_to_clip(self, clip_json, block_index, clan_file):
-
-        clip = Clip("", block_index, clip_json["clip-index"])
-
-        clip.clan_file = clan_file
-        clip.clip_tier = clip_json["clip-tier"]
-        clip.start_time = clip_json["start-time"]
-        clip.offset_time = clip_json["offset-time"]
-        clip.timestamp = clip_json["timestamp"]
-        clip.classification = clip_json["classification"]
-        clip.gender_label = clip_json["gender-label"]
-        clip.label_date = clip_json["label-date"]
-        clip.coder = clip_json["coder"]
-
-        return clip
 
     def send_blocks_back(self):
         self.send_blocks_back_page = Toplevel()
@@ -1941,7 +929,7 @@ class MainWindow:
 
         self.send_back_block_list.delete(0, END)
 
-        for index, block in enumerate(self.clip_blocks):
+        for index, block in enumerate(self.session.clip_blocks):
             block_string = "{} : {}".format(index+1, block.index)
             if block.old:
                 block_string += "  [old]"
@@ -1955,7 +943,7 @@ class MainWindow:
         selection_blocks = []
 
         for selection in selections:
-            block = self.clip_blocks[selection]
+            block = self.session.clip_blocks[selection]
             selection_ids.append(block.id)
             selection_blocks.append(block)
 
@@ -1973,15 +961,15 @@ class MainWindow:
         for block in selection_ids:
             payload["blocks"].append(block)
 
-        resp = requests.post(send_back_blocks_url, json=payload, allow_redirects=False)
+        resp = requests.post(self.server.send_back_blocks_url, json=payload, allow_redirects=False)
 
         for block in selection_blocks:
             self.cleanup_block_data(block)
-            block_index = self.clip_blocks.index(block)
-            del self.clip_blocks[block_index]
+            block_index = self.session.clip_blocks.index(block)
+            del self.session.clip_blocks[block_index]
 
         self.send_back_block_list.delete(0, END)
-        for index, block in enumerate(self.clip_blocks):
+        for index, block in enumerate(self.session.clip_blocks):
             block_string = "{} : {}".format(index+1, block.index)
             if block.old:
                 block_string += "  [old]"
@@ -2019,7 +1007,7 @@ class MainWindow:
             self.send_back_block_list.selection_clear(0, END)
 
     def get_training_blocks(self):
-        if not self.clip_directory:
+        if not self.session.clip_directory:
             showwarning("Set Audio Clips Directory", "You need to have a directory set before downloading blocks\n\n" +
                         "(File -> Set Block Path)")
             return
@@ -2029,50 +1017,15 @@ class MainWindow:
 
         error_response = ""
         for i in range(self.num_training_blocks_to_get):
-            error_response = self.get_training_block()
+            error_response = self.server.get_training_block()
 
         if error_response:
             showwarning("Bad Request", "Server: " + error_response)
 
         self.load_downloaded_blocks()
 
-    def get_training_block(self):
-        payload = {}
-        payload["lab-key"] = self.lab_key
-        payload["username"] = self.codername_entry.get()
-        payload["training"] = True
-        payload["train-pack-num"] = 1
-
-        if not get_block_url:
-            self.parse_config()
-
-        resp = requests.post(get_block_url, json=payload, stream=True, allow_redirects=False)
-
-        if resp.status_code != 200:
-            return resp.content
-
-        if resp.ok:
-
-            params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
-            filename = params[1]['filename']
-            file_end = os.path.basename(filename)
-            file_root = "{}_{}_block{}".format(self.codername_entry.get(), os.path.dirname(filename), file_end)
-            block_path = os.path.join(self.clip_directory, file_root)
-
-            if not os.path.exists(block_path):
-                os.makedirs(block_path)
-
-            output_path = os.path.join(block_path, file_end)
-
-            with open(output_path, "wb") as output:
-                output.write(resp.content)
-
-            block = self.create_block_from_zip(output_path)
-
-            self.clip_blocks.append(block)
-
     def get_reliability_blocks(self):
-        if not self.clip_directory:
+        if not self.session.clip_directory:
             showwarning("Set Audio Clips Directory", "You need to have a directory set before downloading blocks\n\n" +
                         "(File -> Set Block Path)")
             return
@@ -2082,72 +1035,19 @@ class MainWindow:
 
         error_response = ""
         for i in range(self.num_blocks_to_get):
-            error_response = self.get_reliability_block()
+            error_response = self.server.get_reliability_block()
 
         if error_response:
             showwarning("Bad Request", "Server: " + error_response)
 
         self.load_downloaded_blocks()
 
-    def get_reliability_block(self):
-        payload = {}
-        payload["lab-key"] = self.lab_key
-        payload["username"] = self.codername_entry.get()
-        payload["reliability"] = True
-        payload["train-pack-num"] = 1
-
-        if not get_block_url:
-            self.parse_config()
-
-        resp = requests.post(get_block_url, json=payload, stream=True, allow_redirects=False)
-
-        if resp.status_code != 200:
-            return resp.content
-
-        if resp.ok:
-
-            params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
-            filename = params[1]['filename']
-            file_end = os.path.basename(filename)
-            file_root = "{}_{}_block{}".format(self.codername_entry.get(), os.path.dirname(filename), file_end)
-            block_path = os.path.join(self.clip_directory, file_root)
-
-            if not os.path.exists(block_path):
-                os.makedirs(block_path)
-
-            output_path = os.path.join(block_path, file_end)
-
-            with open(output_path, "wb") as output:
-                output.write(resp.content)
-
-            block = self.create_block_from_zip(output_path)
-
-            self.clip_blocks.append(block)
-
-    def save_blocks_to_csv(self, blocks, output_path):
-
-        with open(output_path, "wb") as out:
-            writer = csv.writer(out)
-
-            writer.writerow(["date", "coder", "lab_name", "clan_file", "audiofile", "block", "instance",
-                             "timestamp", "clip", "tier", "label", "gender",
-                             "dont_share", "training", "reliability"])
-
-            for block in blocks:
-                dont_share = False
-                if block.dont_share:
-                    dont_share = True
-
-                for clip in block.clips:
-                    writer.writerow([clip.label_date, clip.coder, block.lab_name, clip.clan_file,
-                                     clip.parent_audio_path, clip.block_index, block.instance,
-                                     clip.timestamp, clip.clip_index, clip.clip_tier,
-                                     clip.classification, clip.gender_label, dont_share,
-                                     block.training, block.reliability])
+    def choose_specific_block(self):
+        print "hello"
 
 
 if __name__ == "__main__":
 
     root = Tk()
-    MainWindow(root)
+    idslabel_main = MainWindow(root)
     root.mainloop()
