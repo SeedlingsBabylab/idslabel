@@ -533,33 +533,16 @@ class MainWindow:
 
     def set_classification_output(self):
         self.classification_output = tkFileDialog.asksaveasfilename()
+        self.output_classifications()
 
     def save_classifications(self, event):
         self.output_classifications()
 
     def output_classifications(self):
-        # ["date", "coder", "lab_name", "clan_file", "audiofile", "block", "timestamp", "clip", "tier", "label", "gender", "dont_share"]
         if not self.classification_output:
             self.classification_output = tkFileDialog.asksaveasfilename()
 
         idsblocks.save_blocks_to_csv([self.current_block], self.classification_output)
-
-        # with open(self.classification_output, "wb") as output:
-        #     writer = csv.writer(output)
-        #     writer.writerow(["date", "coder", "lab_name", "clan_file", "audiofile", "block",
-        #                      "timestamp", "clip", "tier", "label", "gender", "dont_share"])
-        #
-        #     block = self.current_block
-        #     dont_share = False
-        #     if block.dont_share:
-        #         dont_share = True
-        #
-        #     for clip in block.clips:
-        #
-        #         writer.writerow([clip.label_date, clip.coder, self.lab_name, clip.clan_file,
-        #                          clip.parent_audio_path, clip.block_index,
-        #                          clip.timestamp, clip.clip_index,clip.clip_tier,
-        #                          clip.classification, clip.gender_label, dont_share])
 
     def show_shortcuts(self):
         self.shortcuts_menu = Toplevel()
