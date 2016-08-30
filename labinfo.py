@@ -91,18 +91,18 @@ class LabInfoPage:
         self.delete_this_user_button.grid(row=8, column=6)
 
         self.curr_past_block = None
-
         self.curr_past_block_group = None
+        self.curr_lab_info_clip = None
 
         payload = {"lab-key": self.server.lab_key}
 
         resp = requests.post(self.server.lab_info_url, json=payload, allow_redirects=False)
 
         if resp.ok:
-            self.lab_data = json.loads(resp.content)
+            self.session.lab_data = json.loads(resp.content)
 
             i = 0
-            for key, value in self.lab_data['users'].iteritems():
+            for key, value in self.session.lab_data['users'].iteritems():
                 self.lab_info_user_box.insert(i, value['name'])
                 self.session.lab_users.append(value["name"])
                 i += 1
@@ -112,7 +112,7 @@ class LabInfoPage:
         index = int(box.curselection()[0])
 
         self.session.lab_info_curr_user = box.get(index)
-        user_data = self.lab_data["users"][str(self.session.lab_info_curr_user)]
+        user_data = self.session.lab_data["users"][str(self.session.lab_info_curr_user)]
 
         self.lab_info_user_work_box.delete(0, END)
         if user_data["active-work-items"]:
@@ -516,11 +516,11 @@ class LabInfoPage:
         resp = requests.post(self.server.lab_info_url, json=payload, allow_redirects=False)
 
         if resp.ok:
-            self.lab_data = json.loads(resp.content)
+            self.session.lab_data = json.loads(resp.content)
 
             self.lab_info_user_box.delete(0, END)
             i = 0
-            for key, value in self.lab_data['users'].iteritems():
+            for key, value in self.session.lab_data['users'].iteritems():
                 self.lab_info_user_box.insert(i, value['name'])
                 self.session.lab_users.append(value["name"])
                 i += 1

@@ -1,30 +1,19 @@
 import pyaudio
 import wave
 import json
-import random
-import datetime
 import urllib2
 import time
 import csv
 import re
 import os
 import requests
-import cgi
-import zipfile
 import shutil
-
-from operator import itemgetter
 
 from Tkinter import *
 import tkFileDialog
-import tkSimpleDialog
 from tkMessageBox import showwarning, askyesno
-import ttk
-
-
 
 from distutils.version import LooseVersion
-
 
 import labinfo
 import getblock
@@ -34,7 +23,6 @@ import idssession
 
 
 version = "1.0.0"
-
 
 class MainWindow:
 
@@ -169,9 +157,8 @@ class MainWindow:
         self.codername_entry.grid(row=0, column=4)
         self.codername_entry.bind("<Return>", self.codername_entered)
 
-
-
         self.num_blocks_to_get = 3
+
         self.block_request_num_entry = Entry(self.main_frame, width=7)
         self.block_request_num_entry.insert(END, str(self.num_blocks_to_get))
         self.block_request_num_entry.grid(row=1, column=4, sticky="E")
@@ -180,17 +167,10 @@ class MainWindow:
         self.block_num_label = Label(self.main_frame, text="  # blocks:", font="-weight bold")
         self.block_num_label.grid(row=1, column=4, sticky="W")
 
-        self.classification_conflict_label = None
-
         self.clips_processed_label = None
         self.coded_block_label = None
 
         self.interval_regx = re.compile("\\x15\d+_\d+\\x15")
-
-        #self.clip_blocks = []
-        self.clip_path = None
-
-        self.slicing_process = None
 
         self.main_frame.focus_set()
 
@@ -206,38 +186,23 @@ class MainWindow:
 
         self.dont_share_button.grid(row=3, column=4)
 
-        self.loaded_block_history = []
-        self.on_first_block = False
-
         self.previous_block_label = Label(self.main_frame, text="Load Block:")
         self.previous_block_label.grid(row=4, column=4)
 
         self.previous_block_menu = Listbox(self.main_frame, width=14, height=10)
-
         self.previous_block_menu.bind("<Double-Button-1>", self.load_previous_block_downloaded)
-
         self.previous_block_menu.bind("<FocusIn>", self.reset_frame_focus)
-
         self.previous_block_menu.grid(row=5, column=4)
 
         self.classification_output = ""
 
-        self.clip_directory = ""
-
-        self.old_classifications_file = ""
-
-        self.loaded_classification_file = []
-
-        self.reload_multiline_parents = []
-
         self.show_shortcuts()
 
-        self.last_tried_block = 0
-
-        self.key_label_map = {  "a": "ADS",
-                                "c": "CDS",
-                                "j": "JUNK"
-                              }
+        self.key_label_map = {
+            "a": "ADS",
+            "c": "CDS",
+            "j": "JUNK"
+        }
 
         self.gender_label_map = {
             "m": "MALE",
@@ -245,32 +210,7 @@ class MainWindow:
             "u": "UNCLEAR"
         }
 
-        self.num_blocks_to_get = 3
-        self.num_training_blocks_to_get = 10
-
         self.lab_info_page = None
-        self.lab_info_user_box = None
-        self.lab_info_user_work_box = None
-        self.lab_info_user_past_work_box = None
-        self.lab_info_past_work_box = None
-        self.lab_info_past_work_info = None
-        self.lab_info_curr_user = None
-        self.lab_data = None
-        self.past_work_item_data = []
-        self.curr_past_block = None
-        self.curr_past_block_group = None
-        self.curr_lab_info_clip = None
-        self.lab_users = []
-
-
-        self.all_lab_info_user_box = None
-        self.all_lab_data = None
-        self.curr_lab = None
-
-        self.lab_key = ""
-        self.lab_name = ""
-
-        self.prev_downl_blocks = []
 
         self.send_blocks_back_page = None
         self.send_back_block_list = None
@@ -362,9 +302,9 @@ class MainWindow:
         self.parse_config()
         self.session.codername = self.codername_entry.get()
         self.session.clip_directory = self.temp_clip_dir
-        self.prev_downl_blocks = self.load_previously_downl_blocks()
-        if self.prev_downl_blocks:
-            self.session.clip_blocks.extend(self.prev_downl_blocks)
+        self.session.prev_downl_blocks = self.load_previously_downl_blocks()
+        if self.session.prev_downl_blocks:
+            self.session.clip_blocks.extend(self.session.prev_downl_blocks)
         self.load_downloaded_blocks()
         self.main_frame.focus_set()
 
@@ -586,7 +526,7 @@ class MainWindow:
     def set_clip_path(self):
         self.session.clip_directory = tkFileDialog.askdirectory()
         self.session.prev_downl_blocks = self.load_previously_downl_blocks()
-        self.session.clip_blocks.extend(self.prev_downl_blocks)
+        self.session.clip_blocks.extend(self.session.prev_downl_blocks)
 
     def save_as_classifications(self, event):
         self.set_classification_output()
@@ -602,22 +542,24 @@ class MainWindow:
         if not self.classification_output:
             self.classification_output = tkFileDialog.asksaveasfilename()
 
-        with open(self.classification_output, "wb") as output:
-            writer = csv.writer(output)
-            writer.writerow(["date", "coder", "lab_name", "clan_file", "audiofile", "block",
-                             "timestamp", "clip", "tier", "label", "gender", "dont_share"])
+        idsblocks.save_blocks_to_csv([self.current_block], self.classification_output)
 
-            block = self.current_block
-            dont_share = False
-            if block.dont_share:
-                dont_share = True
-
-            for clip in block.clips:
-
-                writer.writerow([clip.label_date, clip.coder, self.lab_name, clip.clan_file,
-                                 clip.parent_audio_path, clip.block_index,
-                                 clip.timestamp, clip.clip_index,clip.clip_tier,
-                                 clip.classification, clip.gender_label, dont_share])
+        # with open(self.classification_output, "wb") as output:
+        #     writer = csv.writer(output)
+        #     writer.writerow(["date", "coder", "lab_name", "clan_file", "audiofile", "block",
+        #                      "timestamp", "clip", "tier", "label", "gender", "dont_share"])
+        #
+        #     block = self.current_block
+        #     dont_share = False
+        #     if block.dont_share:
+        #         dont_share = True
+        #
+        #     for clip in block.clips:
+        #
+        #         writer.writerow([clip.label_date, clip.coder, self.lab_name, clip.clan_file,
+        #                          clip.parent_audio_path, clip.block_index,
+        #                          clip.timestamp, clip.clip_index,clip.clip_tier,
+        #                          clip.classification, clip.gender_label, dont_share])
 
     def show_shortcuts(self):
         self.shortcuts_menu = Toplevel()
@@ -721,7 +663,7 @@ class MainWindow:
             return
 
         error_response = ""
-        for i in range(self.num_blocks_to_get):
+        for i in range(self.session.num_blocks_to_get):
             error_response = self.server.get_block()
 
         if error_response:
@@ -952,8 +894,8 @@ class MainWindow:
             showwarning("Set Coder Name", "You need to set your coder name first")
             return
 
-        payload = {"lab-key": self.lab_key,
-                   "lab-name": self.lab_name,
+        payload = {"lab-key": self.session.lab_key,
+                   "lab-name": self.session.lab_name,
                    "username": name,
                    "blocks": []
                    }
@@ -1016,7 +958,7 @@ class MainWindow:
             return
 
         error_response = ""
-        for i in range(self.num_training_blocks_to_get):
+        for i in range(self.session.num_training_blocks_to_get):
             error_response = self.server.get_training_block()
 
         if error_response:
@@ -1034,7 +976,7 @@ class MainWindow:
             return
 
         error_response = ""
-        for i in range(self.num_blocks_to_get):
+        for i in range(self.session.num_blocks_to_get):
             error_response = self.server.get_reliability_block()
 
         if error_response:
