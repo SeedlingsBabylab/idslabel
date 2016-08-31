@@ -11,6 +11,7 @@ import idsblocks
 class IDSServer(object):
     def __init__(self, config_path=None, session=None):
         self.get_block_url = ""
+        self.get_block_list_url = ""
         self.delete_block_url = ""
         self.delete_user_url = ""
         self.lab_info_url = ""
@@ -44,6 +45,7 @@ class IDSServer(object):
             self.lab_name = config["lab-name"]
 
             self.get_block_url = config["server-urls"]["get_block_url"]
+            self.get_block_list_url = config["server-urls"]["get_block_list_url"]
             self.delete_block_url = config["server-urls"]["delete_block_url"]
             self.delete_user_url = config["server-urls"]["delete_user_url"]
             self.lab_info_url = config["server-urls"]["lab_info_url"]
@@ -192,3 +194,19 @@ class IDSServer(object):
             block = idsblocks.create_block_from_zip(output_path, self.session.codername, self.lab_key)
 
             self.session.clip_blocks.append(block)
+
+    def get_block_list_from_server(self):
+        payload = {}
+        payload["lab-key"] = self.lab_key
+        payload["username"] = self.session.codername
+
+        if not self.get_block_list_url:
+            self.parse_config()
+
+        resp = requests.post(self.get_block_list_url, json=payload, stream=True, allow_redirects=False)
+
+
+        if resp.ok:
+            self.session.block_list_from_server = json.loads(resp.content)
+        else:
+            print resp.content

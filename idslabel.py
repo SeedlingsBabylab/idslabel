@@ -21,7 +21,6 @@ import idsserver
 import idsblocks
 import idssession
 
-
 version = "1.0.0"
 
 class MainWindow:
@@ -66,6 +65,7 @@ class MainWindow:
         self.filemenu.add_command(label="Save As Classifications", command=self.set_classification_output)
         self.filemenu.add_command(label="Set Block Path", command=self.set_clip_path)
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
+        self.filemenu.add_command(label="Choose Blocks From Server", command=self.get_specific_blocks)
         self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
         self.filemenu.add_command(label="Submit Block", command=self.submit_block_and_save)
         self.filemenu.add_command(label="Send Blocks Back", command=self.send_blocks_back)
@@ -211,6 +211,7 @@ class MainWindow:
         }
 
         self.lab_info_page = None
+        self.get_block_page = None
 
         self.send_blocks_back_page = None
         self.send_back_block_list = None
@@ -657,6 +658,9 @@ class MainWindow:
     def get_lab_info(self):
         self.lab_info_page = labinfo.LabInfoPage(self.server, self.session)
 
+    def get_specific_blocks(self):
+        self.get_block_page = getblock.GetBlockPage(self.server, self.session)
+
     def add_user_to_server(self):
 
         self.server.add_user_to_server()
@@ -966,9 +970,6 @@ class MainWindow:
             showwarning("Bad Request", "Server: " + error_response)
 
         self.load_downloaded_blocks()
-
-    def choose_specific_block(self):
-        print "hello"
 
 
 if __name__ == "__main__":

@@ -19,6 +19,8 @@ class Session(object):
 
         self.prev_downl_blocks = []
 
+        self.block_list_from_server = None
+
 
 
 
