@@ -94,7 +94,7 @@ class LabInfoPage:
         self.curr_past_block_group = None
         self.curr_lab_info_clip = None
 
-        payload = {"lab-key": self.server.lab_key}
+        payload = {"lab_key": self.server.lab_key}
 
         resp = requests.post(self.server.lab_info_url, json=payload, allow_redirects=False)
 
@@ -115,13 +115,13 @@ class LabInfoPage:
         user_data = self.session.lab_data["users"][str(self.session.lab_info_curr_user)]
 
         self.lab_info_user_work_box.delete(0, END)
-        if user_data["active-work-items"]:
-            for index, item_id in enumerate(user_data["active-work-items"]):
+        if user_data["active_work_items"]:
+            for index, item_id in enumerate(user_data["active_work_items"]):
                 self.lab_info_user_work_box.insert(index, item_id)
 
         self.lab_info_user_past_work_box.delete(0, END)
-        if user_data["finished-work-items"]:
-            for index, item_id in enumerate(user_data["finished-work-items"]):
+        if user_data["finished_work_items"]:
+            for index, item_id in enumerate(user_data["finished_work_items"]):
                 self.lab_info_user_past_work_box.insert(index, item_id)
 
     def get_labels(self, evt):
@@ -136,8 +136,8 @@ class LabInfoPage:
         training = True if "train_" in work_item else False
         reliability = True if "reliability" in work_item else False
 
-        payload = {"lab-key": self.server.lab_key,
-                   "item-id": work_item,
+        payload = {"lab_key": self.server.lab_key,
+                   "item_id": work_item,
                    "training": training,
                    "reliability": reliability,
                    "username": self.session.lab_info_curr_user}
@@ -258,10 +258,10 @@ class LabInfoPage:
             showwarning("Load Config", "You need to load the config.json first")
             return
 
-        payload = {"lab-key": self.server.lab_key,
+        payload = {"lab_key": self.server.lab_key,
                    "coder": self.curr_past_block.coder,
-                   "block-id": self.curr_past_block.block_id(),
-                   "delete-type": "single",
+                   "block_id": self.curr_past_block.block_id(),
+                   "delete_type": "single",
                    "instance": self.curr_past_block.instance}
 
         resp = requests.post(self.server.delete_block_url, json=payload, allow_redirects=False)
@@ -280,9 +280,9 @@ class LabInfoPage:
                 showwarning("Load Config", "You need to load the config.json first")
                 return
 
-            payload = {"lab-key": self.server.lab_key,
+            payload = {"lab_key": self.server.lab_key,
                        "coder": self.session.lab_info_curr_user,
-                       "delete-type": "user"}
+                       "delete_type": "user"}
 
             resp = requests.post(self.server.delete_block_url, json=payload, allow_redirects=False)
 
@@ -299,8 +299,8 @@ class LabInfoPage:
                 showwarning("Load Config", "You need to load the config.json first")
                 return
 
-            payload = {"lab-key": self.server.lab_key,
-                       "delete-type": "lab"}
+            payload = {"lab_key": self.server.lab_key,
+                       "delete_type": "lab"}
 
             resp = requests.post(self.server.delete_block_url, json=payload, allow_redirects=False)
 
@@ -318,7 +318,7 @@ class LabInfoPage:
                 showwarning("Load Config", "You need to load the config.json first")
                 return
 
-        payload = {"lab-key": self.server.lab_key,
+        payload = {"lab_key": self.server.lab_key,
                    "username": self.session.lab_info_curr_user}
 
         resp = requests.post(self.server.delete_user_url, json=payload, allow_redirects=False)
@@ -336,7 +336,7 @@ class LabInfoPage:
             showwarning("Load Config", "You need to load the config.json first")
             return
 
-        payload = {"lab-key": self.server.lab_key}
+        payload = {"lab_key": self.server.lab_key}
 
         resp = requests.post(self.server.get_lab_labels_url, json=payload, allow_redirects=False)
 
@@ -357,7 +357,7 @@ class LabInfoPage:
             showwarning("Load Config", "You need to load the config.json first")
             return
 
-        payload = {"lab-key": self.server.lab_key}
+        payload = {"lab_key": self.server.lab_key}
 
         resp = requests.post(self.server.get_all_labels_url, json=payload, allow_redirects=False)
 
@@ -380,7 +380,7 @@ class LabInfoPage:
             showwarning("Load Config", "You need to load the config.json first")
             return
 
-        payload = {"lab-key": self.server.lab_key}
+        payload = {"lab_key": self.server.lab_key}
 
         resp = requests.post(self.server.get_train_labels_url, json=payload, allow_redirects=False)
 
@@ -401,7 +401,7 @@ class LabInfoPage:
             showwarning("Load Config", "You need to load the config.json first")
             return
 
-        payload = {"lab-key": self.server.lab_key}
+        payload = {"lab_key": self.server.lab_key}
 
         resp = requests.post(self.server.get_relia_labels_url, json=payload, allow_redirects=False)
 
@@ -511,7 +511,7 @@ class LabInfoPage:
         self.lab_info_past_work_info.configure(state="disabled")
 
     def update_user_list(self):
-        payload = {"lab-key": self.server.lab_key}
+        payload = {"lab_key": self.server.lab_key}
 
         resp = requests.post(self.server.lab_info_url, json=payload, allow_redirects=False)
 
@@ -540,23 +540,23 @@ class LabInfoPage:
         user_data = self.session.lab_data["users"][str(self.session.lab_info_curr_user)]
 
         self.lab_info_user_work_box.delete(0, END)
-        if user_data["active-work-items"]:
-            for index, item_id in enumerate(user_data["active-work-items"]):
+        if user_data["active_work_items"]:
+            for index, item_id in enumerate(user_data["active_work_items"]):
                 self.lab_info_user_work_box.insert(index, item_id)
 
         self.lab_info_user_past_work_box.delete(0, END)
-        if user_data["finished-work-items"]:
-            for index, item_id in enumerate(user_data["finished-work-items"]):
+        if user_data["finished_work_items"]:
+            for index, item_id in enumerate(user_data["finished_work_items"]):
                 self.lab_info_user_past_work_box.insert(index, item_id)
 
-        if user_data["finished-work-items"] and \
-           self.curr_past_block.block_id() in user_data["finished-work-items"]:
+        if user_data["finished_work_items"] and \
+           self.curr_past_block.block_id() in user_data["finished_work_items"]:
 
             self.get_labels_refresh(self.curr_past_block.block_id())
         else:
             self.lab_info_user_past_work_attempt_box.delete(0, END)
-            if user_data["finished-work-items"]:
-                self.get_labels_refresh(user_data["finished-work-items"][0])
+            if user_data["finished_work_items"]:
+                self.get_labels_refresh(user_data["finished_work_items"][0])
 
     def get_labels_refresh(self, block_id):
         work_item = block_id
@@ -567,8 +567,8 @@ class LabInfoPage:
         training = True if "train_" in work_item else False
         reliability = True if "reliability" in work_item else False
 
-        payload = {"lab-key": self.server.lab_key,
-                   "item-id": work_item,
+        payload = {"lab_key": self.server.lab_key,
+                   "item_id": work_item,
                    "training": training,
                    "reliability": reliability,
                    "username": self.session.lab_info_curr_user}

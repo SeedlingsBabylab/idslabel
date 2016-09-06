@@ -34,12 +34,12 @@ class Block(object):
             block["clips"].append(clip.to_dict())
 
         block["coder"] = self.coder
-        block["lab-key"] = self.lab_key
-        block["lab-name"] = self.lab_name
+        block["lab_key"] = self.lab_key
+        block["lab_name"] = self.lab_name
         block["id"] = self.id
-        block["dont-share"] = self.dont_share
-        block["clan-file"] = self.clan_file
-        block["block-index"] = self.index
+        block["dont_share"] = self.dont_share
+        block["clan_file"] = self.clan_file
+        block["block_index"] = self.index
         block["training"] = self.training
         block["reliability"] = self.reliability
         block["username"] = self.username
@@ -50,10 +50,10 @@ class Block(object):
         return "{}:::{}".format(self.clan_file, self.index)
 
 def json_to_block(block_json):
-    block = Block(block_json["block-index"], block_json["clan-file"])
-    block.instance = block_json["block-instance"]
-    block.dont_share = block_json["dont-share"]
-    block.lab_name = block_json["lab-name"]
+    block = Block(block_json["block_index"], block_json["clan_file"])
+    block.instance = block_json["block_instance"]
+    block.dont_share = block_json["dont_share"]
+    block.lab_name = block_json["lab_name"]
     block.coder = block_json["coder"]
 
     block.training = block_json["training"]
@@ -88,18 +88,18 @@ class Clip(object):
     def to_dict(self):
         clip = {}
 
-        clip["clan-file"] = self.clan_file
-        clip["block-index"] = self.block_index
-        clip["clip-index"] = self.clip_index
-        clip["clip-tier"] = self.clip_tier
+        clip["clan_file"] = self.clan_file
+        clip["block_index"] = self.block_index
+        clip["clip_index"] = self.clip_index
+        clip["clip_tier"] = self.clip_tier
         clip["multiline"] = self.multiline
-        clip["multi-tier-parent"] = self.multi_tier_parent
-        clip["start-time"] = self.start_time
-        clip["offset-time"] = self.offset_time
+        clip["multi_tier_parent"] = self.multi_tier_parent
+        clip["start_time"] = self.start_time
+        clip["offset_time"] = self.offset_time
         clip["timestamp"] = self.timestamp
         clip["classification"] = self.classification
-        clip["gender-label"] = self.gender_label
-        clip["label-date"] = self.label_date
+        clip["gender_label"] = self.gender_label
+        clip["label_date"] = self.label_date
         clip["coder"] = self.coder
 
         return clip
@@ -113,16 +113,16 @@ class Clip(object):
                         self.timestamp)
 
 def json_to_clip(clip_json, block_index, clan_file):
-    clip = Clip("", block_index, clip_json["clip-index"])
+    clip = Clip("", block_index, clip_json["clip_index"])
 
     clip.clan_file = clan_file
-    clip.clip_tier = clip_json["clip-tier"]
-    clip.start_time = clip_json["start-time"]
-    clip.offset_time = clip_json["offset-time"]
+    clip.clip_tier = clip_json["clip_tier"]
+    clip.start_time = clip_json["start_time"]
+    clip.offset_time = clip_json["offset_time"]
     clip.timestamp = clip_json["timestamp"]
     clip.classification = clip_json["classification"]
-    clip.gender_label = clip_json["gender-label"]
-    clip.label_date = clip_json["label-date"]
+    clip.gender_label = clip_json["gender_label"]
+    clip.label_date = clip_json["label_date"]
     clip.coder = clip_json["coder"]
 
     return clip

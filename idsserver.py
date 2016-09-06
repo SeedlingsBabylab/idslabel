@@ -41,29 +41,29 @@ class IDSServer(object):
         with open(self.config_path, "rU") as input:
             config = json.load(input)
 
-            self.lab_key = config["lab-key"]
-            self.lab_name = config["lab-name"]
+            self.lab_key = config["lab_key"]
+            self.lab_name = config["lab_name"]
 
-            self.get_block_url = config["server-urls"]["get_block_url"]
-            self.get_block_list_url = config["server-urls"]["get_block_list_url"]
-            self.delete_block_url = config["server-urls"]["delete_block_url"]
-            self.delete_user_url = config["server-urls"]["delete_user_url"]
-            self.lab_info_url = config["server-urls"]["lab_info_url"]
-            self.all_lab_info_url = config["server-urls"]["all_lab_info_url"]
-            self.add_user_url = config["server-urls"]["add_user_url"]
-            self.submit_labels_url = config["server-urls"]["submit_labels_url"]
-            self.get_labels_url = config["server-urls"]["get_labels_url"]
-            self.get_lab_labels_url = config["server-urls"]["get_lab_labels_url"]
-            self.get_all_labels_url = config["server-urls"]["get_all_labels_url"]
-            self.get_train_labels_url = config["server-urls"]["get_train_labels_url"]
-            self.get_relia_labels_url = config["server-urls"]["get_relia_labels_url"]
-            self.send_back_blocks_url = config["server-urls"]["send_back_blocks_url"]
+            self.get_block_url = config["server_urls"]["get_block_url"]
+            self.get_block_list_url = config["server_urls"]["get_block_list_url"]
+            self.delete_block_url = config["server_urls"]["delete_block_url"]
+            self.delete_user_url = config["server_urls"]["delete_user_url"]
+            self.lab_info_url = config["server_urls"]["lab_info_url"]
+            self.all_lab_info_url = config["server_urls"]["all_lab_info_url"]
+            self.add_user_url = config["server_urls"]["add_user_url"]
+            self.submit_labels_url = config["server_urls"]["submit_labels_url"]
+            self.get_labels_url = config["server_urls"]["get_labels_url"]
+            self.get_lab_labels_url = config["server_urls"]["get_lab_labels_url"]
+            self.get_all_labels_url = config["server_urls"]["get_all_labels_url"]
+            self.get_train_labels_url = config["server_urls"]["get_train_labels_url"]
+            self.get_relia_labels_url = config["server_urls"]["get_relia_labels_url"]
+            self.send_back_blocks_url = config["server_urls"]["send_back_blocks_url"]
 
     def lab_info_ping(self):
         if not self.lab_info_url:
             self.parse_config()
 
-        payload = {"lab-key": self.lab_key}
+        payload = {"lab_key": self.lab_key}
 
         resp = requests.post(self.lab_info_url, json=payload, allow_redirects=False)
 
@@ -84,8 +84,8 @@ class IDSServer(object):
         if not name:
             return
 
-        payload = {"lab-key": self.lab_key,
-                   "lab-name": self.lab_name,
+        payload = {"lab_key": self.lab_key,
+                   "lab_name": self.lab_name,
                    "username": name}
 
         resp = requests.post(self.add_user_url, json=payload, allow_redirects=False)
@@ -95,7 +95,7 @@ class IDSServer(object):
 
     def get_block(self):
         payload = {}
-        payload["lab-key"] = self.lab_key
+        payload["lab_key"] = self.lab_key
         payload["username"] = self.session.codername
 
         if not self.get_block_url:
@@ -127,10 +127,10 @@ class IDSServer(object):
 
     def get_training_block(self):
         payload = {}
-        payload["lab-key"] = self.lab_key
+        payload["lab_key"] = self.lab_key
         payload["username"] = self.session.codername
         payload["training"] = True
-        payload["train-pack-num"] = 1
+        payload["train_pack_num"] = 1
 
         if not self.get_block_url:
             self.parse_config()
@@ -162,10 +162,10 @@ class IDSServer(object):
 
     def get_reliability_block(self):
         payload = {}
-        payload["lab-key"] = self.lab_key
+        payload["lab_key"] = self.lab_key
         payload["username"] = self.session.codername
         payload["reliability"] = True
-        payload["train-pack-num"] = 1
+        payload["train_pack_num"] = 1
 
         if not self.get_block_url:
             self.parse_config()
@@ -197,7 +197,7 @@ class IDSServer(object):
 
     def get_block_list_from_server(self):
         payload = {}
-        payload["lab-key"] = self.lab_key
+        payload["lab_key"] = self.lab_key
         payload["username"] = self.session.codername
 
         if not self.get_block_list_url:
@@ -210,3 +210,11 @@ class IDSServer(object):
             self.session.block_list_from_server = json.loads(resp.content)
         else:
             print resp.content
+
+    def get_specific_block(self, block_id):
+        payload = {}
+        payload["lab_key"] = self.lab_key
+        payload["username"] = self.session.codername
+        payload["block_id"]
+
+

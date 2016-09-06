@@ -881,8 +881,8 @@ class MainWindow:
             showwarning("Set Coder Name", "You need to set your coder name first")
             return
 
-        payload = {"lab-key": self.session.lab_key,
-                   "lab-name": self.session.lab_name,
+        payload = {"lab_key": self.session.lab_key,
+                   "lab_name": self.session.lab_name,
                    "username": name,
                    "blocks": []
                    }
