@@ -7,9 +7,10 @@ import idssession
 
 
 class GetBlockPage(object):
-    def __init__(self, server, session):
+    def __init__(self, server, session, main_page):
         self.server = server
         self.session = session
+        self.main_page = main_page
 
         self.get_block_page_root = Toplevel()
         self.get_block_page_root.title("Get Blocks")
@@ -95,3 +96,5 @@ class GetBlockPage(object):
 
         for item in selected_items:
             self.server.get_specific_block(item)
+
+        self.main_page.load_downloaded_blocks()

@@ -11,6 +11,7 @@ import idsblocks
 class IDSServer(object):
     def __init__(self, config_path=None, session=None):
         self.get_block_url = ""
+        self.get_specific_block_url = ""
         self.get_block_list_url = ""
         self.delete_block_url = ""
         self.delete_user_url = ""
@@ -45,6 +46,7 @@ class IDSServer(object):
             self.lab_name = config["lab_name"]
 
             self.get_block_url = config["server_urls"]["get_block_url"]
+            self.get_specific_block_url = config["server_urls"]["get_specific_block_url"]
             self.get_block_list_url = config["server_urls"]["get_block_list_url"]
             self.delete_block_url = config["server_urls"]["delete_block_url"]
             self.delete_user_url = config["server_urls"]["delete_user_url"]
@@ -215,6 +217,33 @@ class IDSServer(object):
         payload = {}
         payload["lab_key"] = self.lab_key
         payload["username"] = self.session.codername
-        payload["block_id"]
+        payload["block_id"] = block_id
 
+
+        if not self.get_specific_block_url:
+            self.parse_config()
+
+        resp = requests.post(self.get_specific_block_url, json=payload, stream=True, allow_redirects=False)
+
+        if resp.status_code != 200:
+            return resp.content
+
+        if resp.ok:
+            params = cgi.parse_header(resp.headers.get('Content-Disposition', ''))
+            filename = params[1]['filename']
+            file_end = os.path.basename(filename)
+            file_root = "{}_{}_block{}".format(self.session.codername, os.path.dirname(filename), file_end)
+            block_path = os.path.join(self.session.clip_directory, file_root)
+
+            if not os.path.exists(block_path):
+                os.makedirs(block_path)
+
+            output_path = os.path.join(block_path, file_end)
+
+            with open(output_path, "wb") as output:
+                output.write(resp.content)
+
+            block = idsblocks.create_block_from_zip(output_path, self.session.codername, self.lab_key)
+
+            self.session.clip_blocks.append(block)
 

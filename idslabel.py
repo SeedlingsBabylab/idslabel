@@ -659,7 +659,7 @@ class MainWindow:
         self.lab_info_page = labinfo.LabInfoPage(self.server, self.session)
 
     def get_specific_blocks(self):
-        self.get_block_page = getblock.GetBlockPage(self.server, self.session)
+        self.get_block_page = getblock.GetBlockPage(self.server, self.session, self)
 
     def add_user_to_server(self):
 
@@ -802,7 +802,7 @@ class MainWindow:
             return []
 
         user_data = users[user]
-        user_active_blocks = user_data["active-work-items"]
+        user_active_blocks = user_data["active_work_items"]
 
         for root, dirs, files in os.walk(self.session.clip_directory):
             if any(".zip" in file for file in files):
