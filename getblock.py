@@ -1,6 +1,8 @@
 from Tkinter import *
 import tkFileDialog
 
+from tkMessageBox import showwarning, askyesno
+
 import idsserver
 import idsblocks
 import idssession
@@ -14,7 +16,7 @@ class GetBlockPage(object):
 
         self.get_block_page_root = Toplevel()
         self.get_block_page_root.title("Get Blocks")
-        self.get_block_page_root.geometry("800x450")
+        self.get_block_page_root.geometry("700x450")
 
         self.available_blocks_label = Label(self.get_block_page_root,
                                             text="Available Blocks")

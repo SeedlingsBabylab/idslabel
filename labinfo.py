@@ -137,7 +137,7 @@ class LabInfoPage:
         reliability = True if "reliability" in work_item else False
 
         payload = {"lab_key": self.server.lab_key,
-                   "item_id": work_item,
+                   "block_id": work_item,
                    "training": training,
                    "reliability": reliability,
                    "username": self.session.lab_info_curr_user}
@@ -559,16 +559,14 @@ class LabInfoPage:
                 self.get_labels_refresh(user_data["finished_work_items"][0])
 
     def get_labels_refresh(self, block_id):
-        work_item = block_id
-
         if not self.server.lab_info_url:
             self.server.parse_config()
 
-        training = True if "train_" in work_item else False
-        reliability = True if "reliability" in work_item else False
+        training = True if "train_" in block_id else False
+        reliability = True if "reliability" in block_id else False
 
         payload = {"lab_key": self.server.lab_key,
-                   "item_id": work_item,
+                   "block_id": block_id,
                    "training": training,
                    "reliability": reliability,
                    "username": self.session.lab_info_curr_user}
