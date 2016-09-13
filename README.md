@@ -41,7 +41,7 @@ $: sudo pip install pyaudio
 - You type your name into the CODER_NAME box and press enter
  - Something should pop up asking you to set the path to the blocks directory. This is the directory where the conversation blocks will be downloaded.
  - This should be a dedicated path that you always use (try not to change it each time you run the application). When you exit the application and start it again, it'll look through the blocks already sitting there from previous sessions (unfinished, haven't submitted classifications back to the server, after submission they're deleted) and loads them again into the application so that you can continue to work on them.
- - **Do not delete the contents in that blocks directory**. If you want to get rid of things that are sitting there, label them within the running idslabel application and submit those classifications. The application will delete them after you submit the block.
+ - **DO NOT DELETE THE CONTENTS IN THAT BLOCKS DIRECTORY**. Ideally, it's best not to touch that directory at all. If you want to get rid of things that are sitting there, label them within the running idslabel application and submit those classifications. The application will delete them after you submit the block.
 - The application will then ask you to choose a config.json file. The value in the "lab-key" field is your lab's unique identifier.
 - If you're running this for the first time, the next thing that should pop up is a message saying: "User: "xyz" doesn't exist on the server".
  - In the menu, go to File -> Add User to Server.

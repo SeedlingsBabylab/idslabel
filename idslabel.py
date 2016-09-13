@@ -65,6 +65,7 @@ class MainWindow:
         self.filemenu.add_command(label="Save Classifications", command=self.output_classifications)
         self.filemenu.add_command(label="Save As Classifications", command=self.set_classification_output)
         self.filemenu.add_command(label="Set Block Path", command=self.set_clip_path)
+        self.filemenu.add_command(label="Load config.json File", command=self.load_config_json)
         self.filemenu.add_command(label="Get Lab Info", command=self.get_lab_info)
         self.filemenu.add_command(label="Choose Blocks From Server", command=self.get_specific_blocks)
         self.filemenu.add_command(label="Add User to Server", command=self.add_user_to_server)
@@ -197,7 +198,7 @@ class MainWindow:
 
         self.classification_output = ""
 
-        self.show_shortcuts()
+        #self.show_shortcuts()
 
         self.key_label_map = {
             "a": "ADS",
@@ -666,7 +667,21 @@ class MainWindow:
 
         self.server.add_user_to_server()
 
-    def parse_config(self):
+    def load_config_json(self):
+        config_path = tkFileDialog.askopenfilename(title="Load Config File")
+        self.parse_config(config_path)
+
+        self.session.codername = self.codername_entry.get()
+        self.session.clip_directory = self.temp_clip_dir
+        del self.session.clip_blocks[:]
+        self.server.lab_info_ping()
+        self.session.prev_downl_blocks = self.load_previously_downl_blocks()
+        if self.session.prev_downl_blocks:
+            self.session.clip_blocks.extend(self.session.prev_downl_blocks)
+        self.load_downloaded_blocks()
+        self.main_frame.focus_set()
+
+    def parse_config(self, path=None):
 
         curr_workdir = None
         if getattr(sys, 'frozen', False):
@@ -677,11 +692,13 @@ class MainWindow:
         files_in_cwd = os.listdir(curr_workdir)
         filtered_files = filter(lambda x: "config" in x and x.endswith(".json"), files_in_cwd)
 
-        if len(filtered_files) == 1:
+        if len(filtered_files) == 1 and not path:
             config_path = os.path.join(curr_workdir, filtered_files[0])
-        else:
+        elif path is None:
             showwarning("Config File", "Please choose a config.json file to load")
-            config_path = tkFileDialog.askopenfilename()
+            config_path = tkFileDialog.askopenfilename(title="Load Config File")
+        else:
+            config_path = path
 
         self.server = idsserver.IDSServer(config_path, self.session)
         self.session.server = self.server
