@@ -35,6 +35,7 @@ class LabInfoPage:
         self.lab_info_user_box = Listbox(self.lab_info_page_root, width=15, height=20)
         self.lab_info_user_box.grid(row=1, column=0, rowspan=9)
         self.lab_info_user_box.bind('<<ListboxSelect>>', self.update_curr_user)
+        self.lab_info_user_box.bind('<Double-Button-1>', self.show_user_info_page)
 
         self.lab_info_user_work_box = Listbox(self.lab_info_page_root, width=22, height=20)
         self.lab_info_user_work_box.grid(row=1, column=1, rowspan=9)
@@ -583,3 +584,67 @@ class LabInfoPage:
         else:
             showwarning("Bad Request", "Server: {}".format(resp.content))
             return
+
+    def show_user_info_page(self, event):
+        self.user_info_page_root = Toplevel()
+        self.user_info_page_root.title("User Info")
+        self.user_info_page_root.geometry("400x450")
+
+        self.user_info_text = Text(self.user_info_page_root, width=36, height=20)
+        self.user_info_text.grid(row=0, column=0, rowspan=9)
+
+        box = event.widget
+        index = int(box.curselection()[0])
+
+        user = box.get(index)
+
+        if self.session.lab_data["users"][user]["finished_work_items"]:
+            total_finished = len(self.session.lab_data["users"][user]["finished_work_items"])
+        else:
+            total_finished = 0
+        if self.session.lab_data["users"][user]["complete_reliability_blocks"]:
+            total_complete_reliability = len(self.session.lab_data["users"][user]["complete_reliability_blocks"])
+        else:
+            total_complete_reliability = 0
+        if self.session.lab_data["users"][user]["complete_train_blocks"]:
+            total_complete_train = len(self.session.lab_data["users"][user]["complete_train_blocks"])
+        else:
+            total_complete_train = 0
+
+        info_string = "{}   {}\n\n{}   {}\n{}   {}\n{}   {}\n\n" \
+            .format("user:",
+                    user,
+                    "total finished blocks:",
+                    str(total_finished),
+                    "finished training:",
+                    str(total_complete_train),
+                    "finished reliability:",
+                    str(total_complete_reliability))
+
+        self.user_info_text.insert('1.0', info_string)
+
+
+        self.user_info_text.tag_add("user_key", 1.0, 1.4)
+        self.user_info_text.tag_add("total_num_key", 3.0, 3.21)
+        self.user_info_text.tag_add("total_train_key", 4.0, 4.17)
+        self.user_info_text.tag_add("total_relia_key", 5.0, "5.20")
+
+
+        self.user_info_text.tag_add("user_value", 1.4, 2.2)
+        self.user_info_text.tag_add("total_num_value", 3.21, 4.0)
+        self.user_info_text.tag_add("total_train_value", 4.17, 5.0)
+        self.user_info_text.tag_add("total_relia_value", "5.20", 6.0)
+
+
+        self.user_info_text.tag_configure("user_key", font=("System", "12", "bold"))
+        self.user_info_text.tag_configure("total_num_key", font=("System", "12", "bold"))
+        self.user_info_text.tag_configure("total_train_key", font=("System", "12", "bold"))
+        self.user_info_text.tag_configure("total_relia_key", font=("System", "12", "bold"))
+
+
+        self.user_info_text.tag_configure("user_value", font=("System", "12"))
+        self.user_info_text.tag_configure("total_num_value", font=("System", "12"))
+        self.user_info_text.tag_configure("total_train_value", font=("System", "12"))
+        self.user_info_text.tag_configure("total_relia_value", font=("System", "12"))
+
+        self.user_info_text.configure(state="disabled")

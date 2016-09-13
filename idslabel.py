@@ -15,6 +15,7 @@ from tkMessageBox import showwarning, askyesno
 
 from distutils.version import LooseVersion
 
+
 import labinfo
 import getblock
 import idsserver
@@ -667,8 +668,20 @@ class MainWindow:
 
     def parse_config(self):
 
-        showwarning("Config File", "Please choose a config.json file to load")
-        config_path = tkFileDialog.askopenfilename()
+        curr_workdir = None
+        if getattr(sys, 'frozen', False):
+            curr_workdir = os.path.dirname(sys.executable)
+        elif __file__:
+            curr_workdir = os.path.dirname(__file__)
+
+        files_in_cwd = os.listdir(curr_workdir)
+        filtered_files = filter(lambda x: "config" in x and x.endswith(".json"), files_in_cwd)
+
+        if len(filtered_files) == 1:
+            config_path = os.path.join(curr_workdir, filtered_files[0])
+        else:
+            showwarning("Config File", "Please choose a config.json file to load")
+            config_path = tkFileDialog.askopenfilename()
 
         self.server = idsserver.IDSServer(config_path, self.session)
         self.session.server = self.server
@@ -703,7 +716,7 @@ class MainWindow:
                 return
 
             if resp.ok:
-                print "block: {}:::{}  sent back to the server".format(block.clan_file, block.index)
+                #print "block: {}:::{}  sent back to the server".format(block.clan_file, block.index)
                 self.cleanup_block_data(block)
                 block_index = self.session.clip_blocks.index(block)
                 del self.session.clip_blocks[block_index]

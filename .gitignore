@@ -12,3 +12,6 @@ configs
 *.spec
 *.csv
 *.pyc
+idslabel
+config_elika_local.json
+scripts
