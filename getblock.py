@@ -97,6 +97,8 @@ class GetBlockPage(object):
         print selected_items
 
         for item in selected_items:
-            self.server.get_specific_block(item)
+            error_response = self.server.get_specific_block(item)
+            if error_response:
+                showwarning("Bad Request", "block: {}\n\nServer: {}".format(item, error_response))
 
         self.main_page.load_downloaded_blocks()

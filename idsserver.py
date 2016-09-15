@@ -247,3 +247,5 @@ class IDSServer(object):
 
             self.session.clip_blocks.append(block)
 
+            return None
+
