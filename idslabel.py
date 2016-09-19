@@ -687,7 +687,7 @@ class MainWindow:
         if getattr(sys, 'frozen', False):
             curr_workdir = os.path.dirname(sys.executable)
         elif __file__:
-            curr_workdir = os.path.dirname(__file__)
+            curr_workdir = os.path.dirname(os.path.abspath(__file__))
 
         files_in_cwd = os.listdir(curr_workdir)
         filtered_files = filter(lambda x: "config" in x and x.endswith(".json"), files_in_cwd)
