@@ -209,7 +209,6 @@ class MainWindow:
         self.gender_label_map = {
             "m": "MALE",
             "f": "FEMALE",
-            "u": "UNCLEAR"
         }
 
         self.lab_info_page = None
@@ -572,7 +571,7 @@ class MainWindow:
 
         male       = "\tm : Male\n"
         female     = "\tf : Female\n"
-        unclear    = "\tu : Unclear\n"
+
 
         clips = "\nClip Navigation/Playback Keys:\n\n"
         up         = "\tup            : previous clip\n"
@@ -595,7 +594,6 @@ class MainWindow:
                                 junk+\
                                 male+\
                                 female+\
-                                unclear+\
                                 clips+\
                                 up+
                                 left+\
