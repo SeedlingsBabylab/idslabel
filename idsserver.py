@@ -26,6 +26,8 @@ class IDSServer(object):
         self.get_relia_labels_url = ""
         self.send_back_blocks_url = ""
 
+        self.group_num = 0
+
         self.github_tags_url = "https://api.github.com/repos/SeedlingsBabylab/idslabel/tags"
 
         self.lab_key = ""
@@ -44,6 +46,8 @@ class IDSServer(object):
 
             self.lab_key = config["lab_key"]
             self.lab_name = config["lab_name"]
+
+            self.group_num = config["group_num"]
 
             self.get_block_url = config["server_urls"]["get_block_url"]
             self.get_specific_block_url = config["server_urls"]["get_specific_block_url"]
