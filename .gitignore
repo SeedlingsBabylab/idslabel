@@ -1,6 +1,7 @@
 .ropeproject
 .idea
 *.wav
+*.json
 dist
 build
 ffmpeg
@@ -15,3 +16,7 @@ configs
 idslabel
 config_elika_local.json
 scripts
+configs_new_group2
+configs_new
+group2_dist
+new_blocks
