@@ -1,6 +1,6 @@
 # idslabel
 
-Note: This is a work in progress.
+Note: Wiki documentation available on osf [here] (https://osf.io/d9ac4/wiki/home/) 
 
 ![IDSLabel](include/main_screenshot.png)
 
